@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Digital Andon System (Cloud)</title>
+<title>Digital Andon System (Permanent Stations)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 @keyframes pulse-red {
@@ -16,59 +16,393 @@ animation: pulse-red 1s infinite;
 .timer-glow {
 text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
 }
-.category-scroll::-webkit-scrollbar {
-width: 4px;
-}
-.category-scroll::-webkit-scrollbar-thumb {
-background: #475569;
-border-radius: 10px;
-}
 </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-<div id="app" class="max-w-5xl mx-auto p-4 pb-24">
-<!-- Header -->
+<div id="roomSelectionOverlay" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
+<div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl max-w-sm w-full shadow-2xl text-center">
+<div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/20">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+</div>
+<h2 class="text-2xl font-black mb-2">Join Shared Room</h2>
+<p class="text-slate-400 text-sm mb-6">Enter a room name to connect. Case sensitive.</p>
+<input type="text" id="roomInput" placeholder="e.g. MainShop" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-center text-xl font-bold focus:ring-2 focus:ring-blue-500 outline-none uppercase tracking-widest">
+<button onclick="joinRoom()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-lg transition-all shadow-lg active:scale-95">CONNECT NOW</button>
+</div>
+</div>
+
+<div id="app" class="max-w-5xl mx-auto p-4 pb-24 hidden">
 <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
 <div>
 <h1 class="text-3xl font-black tracking-tight text-white flex items-center gap-3">
 <span id="connectionDot" class="w-4 h-4 bg-slate-600 rounded-full transition-colors"></span>
-ANDON CLOUD
+ROOM: <span id="roomDisplay" class="text-blue-400">---</span>
 </h1>
-<p class="text-slate-400 text-sm" id="userDisplay">Connecting to Firebase...</p>
+<p class="text-slate-400 text-sm" id="userDisplay">Connecting...</p>
 </div>
 
-<div class="flex items-center gap-4">
-<button onclick="showSettingsModal()" class="p-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-600">
+<div class="flex items-center gap-3">
+<button onclick="showStatsModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-colors shadow-lg active:scale-95">
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+Stats
+</button>
+
+<button onclick="showSettingsModal()" class="p-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-600 shadow-lg active:scale-95">
 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
 </button>
 
-<div class="flex items-center gap-3 bg-slate-700/50 p-3 rounded-xl border border-slate-600">
+<div class="flex items-center gap-3 bg-slate-700/50 p-3 rounded-xl border border-slate-600 ml-2">
 <span class="text-xs font-bold uppercase tracking-wider">Lead Mode</span>
 <button id="leadToggle" onclick="toggleLeadMode()" class="relative inline-flex h-7 w-12 items-center rounded-full bg-slate-600 transition-colors">
 <span id="leadToggleThumb" class="inline-block h-5 w-5 transform rounded-full bg-white transition-transform translate-x-1"></span>
 </button>
 </div>
-
-<button onclick="showAddModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg flex items-center gap-2">
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-Add
-</button>
 </div>
 </header>
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="statsBar"></div>
-<div id="processGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+<div id="processGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
 </div>
 
-<!-- Modals -->
 <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-<div id="addProcessModal" class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 hidden">
-<h2 class="text-xl font-bold mb-2">Add Division</h2>
-<p class="text-slate-400 text-xs mb-4">Select a category to add to the board.</p>
-<div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto mb-6 pr-2 category-scroll">
-<button onclick="addProcess('Installation')" class="p-3 bg-slate-700 hover:bg-blue-600 rounded-xl text-sm font-bold text-left flex items-center justify-between group transition-colors">Installation <span>+</span></button>
-<button onclick="addProcess('Millwork')" class="p-3 bg-slate-700 hover:bg-blue-600 rounded-xl text-sm font-bold text-left flex items-center justify-between group transition-colors">Millwork <span>+</span></button>
-<button onclick="addProcess('Systems')" class="p-3 bg-slate-700 hover:bg-blue-600 rounded-xl text-sm font-bold text-left flex items-center justify-between group transition-colors">Systems <span>+</span></button>
-<button onclick="addProcess('Lamination')" class="p-3 bg-slate-700 hover:bg-blue-600 rounded-xl text-sm font-bold text-left flex items-center justify-between group transition-colors">Lamination <span>+</span></button>
-<button onclick="addProcess('Upholstery')" class="p-3 bg-slate-700 hover:bg-blue-600 rounded-xl text-sm font-bold text-left flex items-center justify-between group transition-colors">U
+
+<div id="settingsModal" class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 hidden">
+<h2 class="text-xl font-bold mb-6">Escalation Settings</h2>
+<div class="mb-6">
+<label class="block text-xs font-bold uppercase text-slate-500 mb-2">Warning Timeout (Minutes)</label>
+<div class="flex items-center gap-4">
+<input type="range" id="timeoutRange" min="1" max="60" value="10" class="flex-1 accent-blue-500" oninput="updateTimeoutLabel(this.value)">
+<span id="timeoutLabel" class="text-2xl font-black text-blue-400 w-12 text-center">10</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button onclick="closeModals()" class="flex-1 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">Cancel</button>
+<button onclick="saveSettings()" class="flex-1 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold">Save Settings</button>
+</div>
+</div>
+
+<div id="statsModal" class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 hidden">
+<h2 class="text-2xl font-black mb-6 border-b border-slate-700 pb-4">Incident Statistics</h2>
+
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="bg-amber-900/30 border border-amber-500/30 p-4 rounded-xl text-center">
+<p class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-1">Help Required</p>
+<p id="totalHelpStat" class="text-4xl font-black text-amber-400">0</p>
+<p class="text-[10px] text-slate-400 mt-2">Total 'Warning' triggers</p>
+</div>
+
+<div class="bg-red-900/30 border border-red-500/30 p-4 rounded-xl text-center">
+<p class="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Fires / Stops</p>
+<p id="totalFireStat" class="text-4xl font-black text-red-400">0</p>
+<p class="text-[10px] text-slate-400 mt-2">Total 'Critical' triggers</p>
+</div>
+</div>
+
+<button onclick="closeModals()" class="w-full px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold text-white transition-colors">Close</button>
+</div>
+</div>
+
+<div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-96 transform translate-y-32 transition-transform duration-300 z-50 pointer-events-none">
+<div class="bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="bg-white/20 p-2 rounded-full">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+</div>
+<div>
+<p class="font-black text-xs uppercase opacity-80" id="toastTitle">Alert</p>
+<p id="toastMsg" class="text-lg font-medium leading-tight"></p>
+</div>
+</div>
+<button onclick="dismissToast()" class="p-2 pointer-events-auto">✕</button>
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Your specific Firebase configuration
+const firebaseConfig = {
+apiKey: "AIzaSyD23yd-MlA4lMc1l95hgUulYE-4hIehRDg",
+authDomain: "andon-f8690.firebaseapp.com",
+projectId: "andon-f8690",
+storageBucket: "andon-f8690.firebasestorage.app",
+messagingSenderId: "83350352802",
+appId: "1:83350352802:web:f3928af76cd3ebc62138fb",
+measurementId: "G-E3FJFMD04V"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Permanent stations list
+const PERMANENT_STATIONS = ['Installation', 'Millwork', 'Systems', 'Lamination', 'Upholstery', 'CNC', 'Finishing', 'Assembly'];
+
+let activeRoom = '';
+let processes = [];
+let globalStats = { helpCount: 0, fireCount: 0 };
+let isLeadMode = false;
+let warningTimeoutMinutes = 10;
+let audioContext = null;
+let currentUser = null;
+
+let unsubscribeSettings = null;
+let unsubscribeProcesses = null;
+let unsubscribeStats = null;
+
+// Dynamic paths based on Room
+const getPublicDataPath = (col) => collection(db, 'artifacts', activeRoom, 'public', 'data', col);
+const getGlobalSettingsPath = () => doc(db, 'artifacts', activeRoom, 'public', 'data', 'config', 'settings');
+const getGlobalStatsPath = () => doc(db, 'artifacts', activeRoom, 'public', 'data', 'config', 'statistics');
+
+window.joinRoom = async () => {
+const input = document.getElementById('roomInput').value.trim().toUpperCase();
+if (!input) return;
+
+activeRoom = room-${input}`;
+document.getElementById('roomDisplay').innerText = input;
+document.getElementById('roomSelectionOverlay').classList.add('hidden');
+document.getElementById('app').classList.remove('hidden');
+
+startApp();
+};
+
+async function startApp() {
+try {
+await signInAnonymously(auth);
+} catch (err) {
+console.error("Firebase Login Error:", err);
+alert("Failed to connect to database. Check internet connection.");
+}
+}
+
+onAuthStateChanged(auth, (user) => {
+if (user && activeRoom) {
+currentUser = user;
+document.getElementById('userDisplay').innerText = Live Connection Active;
+document.getElementById('connectionDot').classList.replace('bg-slate-600', 'bg-green-500');
+setupListeners();
+}
+});
+
+function setupListeners() {
+if (unsubscribeSettings) unsubscribeSettings();
+if (unsubscribeProcesses) unsubscribeProcesses();
+if (unsubscribeStats) unsubscribeStats();
+
+// Settings Listener
+unsubscribeSettings = onSnapshot(getGlobalSettingsPath(), (snap) => {
+if (snap.exists()) {
+warningTimeoutMinutes = snap.data().timeout || 10;
+document.getElementById('timeoutLabel').innerText = warningTimeoutMinutes;
+document.getElementById('timeoutRange').value = warningTimeoutMinutes;
+}
+});
+
+// Statistics Listener
+unsubscribeStats = onSnapshot(getGlobalStatsPath(), (snap) => {
+if (snap.exists()) {
+globalStats = snap.data();
+document.getElementById('totalHelpStat').innerText = globalStats.helpCount || 0;
+document.getElementById('totalFireStat').innerText = globalStats.fireCount || 0;
+}
+});
+
+// Process Board Listener
+unsubscribeProcesses = onSnapshot(getPublicDataPath('processes'), (snap) => {
+// Initial creation of permanent stations if the room is empty
+if (snap.empty && currentUser) {
+PERMANENT_STATIONS.forEach(async (name, index) => {
+const fixedId = station-${index}`;
+await setDoc(doc(getPublicDataPath('processes'), fixedId), {
+name: name,
+status: 'normal',
+endTime: null,
+createdAt: Date.now() + index
+}, { merge: true });
+});
+return;
+}
+
+const oldStatuses = new Map(processes.map(p => [p.id, p.status]));
+processes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+if (isLeadMode) {
+processes.forEach(p => {
+const oldStatus = oldStatuses.get(p.id);
+if (p.status !== 'normal' && p.status !== oldStatus && oldStatus !== undefined) {
+playAlarm(p.status);
+showToast(${p.name}: ${p.status.toUpperCase()}, p.status === 'critical' ? 'FIRE/STOPPED' : 'HELP NEEDED', p.status === 'critical' ? 'bg-red-600' : 'bg-amber-500');
+}
+});
+}
+render();
+});
+}
+
+window.setStatus = async (id, newStatus) => {
+try {
+if (!currentUser) return;
+
+const process = processes.find(p => p.id === id);
+if (!process) return;
+
+// Stop if the status is already what we are clicking
+if (process.status === newStatus) return;
+
+const ref = doc(getPublicDataPath('processes'), id);
+let update = { status: newStatus };
+
+// Set logic and update stats asynchronously (so they don't block the UI update)
+if (newStatus === 'warning') {
+update.endTime = Date.now() + (warningTimeoutMinutes * 60 * 1000);
+setDoc(getGlobalStatsPath(), { helpCount: increment(1) }, { merge: true }).catch(console.error);
+} else if (newStatus === 'critical') {
+update.endTime = null;
+setDoc(getGlobalStatsPath(), { fireCount: increment(1) }, { merge: true }).catch(console.error);
+} else {
+update.endTime = null;
+}
+
+await updateDoc(ref, update);
+
+} catch (error) {
+console.error("Set Status Error:", error);
+alert("Database update failed: " + error.message);
+}
+};
+
+window.saveSettings = async () => {
+if (currentUser) {
+await setDoc(getGlobalSettingsPath(), { timeout: warningTimeoutMinutes });
+closeModals();
+}
+};
+
+window.toggleLeadMode = () => {
+isLeadMode = !isLeadMode;
+if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const thumb = document.getElementById('leadToggleThumb');
+const btn = document.getElementById('leadToggle');
+if (isLeadMode) {
+thumb.classList.replace('translate-x-1', 'translate-x-6');
+btn.classList.replace('bg-slate-600', 'bg-blue-500');
+} else {
+thumb.classList.replace('translate-x-6', 'translate-x-1');
+btn.classList.replace('bg-blue-500', 'bg-slate-600');
+dismissToast();
+}
+};
+
+function playAlarm(type) {
+if (!audioContext) return;
+const osc = audioContext.createOscillator();
+const gain = audioContext.createGain();
+osc.connect(gain); gain.connect(audioContext.destination);
+osc.type = type === 'critical' ? 'sawtooth' : 'sine';
+osc.frequency.setValueAtTime(type === 'critical' ? 440 : 330, audioContext.currentTime);
+gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+osc.start(); osc.stop(audioContext.currentTime + 0.5);
+}
+
+// Timer interval completely decoupled from rendering the whole board
+setInterval(() => {
+processes.forEach(p => {
+if (p.status === 'warning' && p.endTime) {
+const diff = p.endTime - Date.now();
+if (diff <= 0) {
+setStatus(p.id, 'critical'); // Auto fire if timer runs out
+} else {
+// Update ONLY the timer text directly, avoiding DOM destruction
+const totalSecs = Math.floor(diff / 1000);
+const display = ${Math.floor(totalSecs/60)}:${(totalSecs%60).toString().padStart(2,'0')};
+const timerElement = document.getElementById(timer-${p.id}`);
+if (timerElement) {
+timerElement.innerText = display;
+}
+}
+}
+});
+}, 1000);
+
+function render() {
+const grid = document.getElementById('processGrid');
+if (!grid) return;
+grid.innerHTML = '';
+
+const sorted = [...processes].sort((a,b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+sorted.forEach(p => {
+const card = document.createElement('div');
+let statusClasses = 'bg-slate-800 border-slate-700';
+let indicatorColor = 'bg-green-500';
+let timerHtml = p.status === 'normal' ? '<div class="mt-2 text-xl font-bold text-slate-500 uppercase">Ready</div>' : '';
+
+if (p.status === 'warning') {
+statusClasses = 'bg-amber-900/40 border-amber-500/50 ring-4 ring-amber-500/10';
+indicatorColor = 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]';
+
+const diff = p.endTime - Date.now();
+const totalSecs = Math.max(0, Math.floor(diff / 1000));
+const display = ``${Math.floor(totalSecs/60)}:${(totalSecs%60).toString().padStart(2,'0')};
+
+// Notice the added id parameter for the timer update
+timerHtml = <div id="timer-${p.id}" class="mt-2 text-3xl font-black text-amber-400 timer-glow tabular-nums">${display}&lt;/div>;
+} else if (p.status === 'critical') {
+statusClasses = 'emergency-blink border-red-400 shadow-2xl';
+indicatorColor = 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)]';
+timerHtml = <div class="mt-2 text-xl font-black text-white uppercase tracking-widest"&gt;Station Fire/Stop&lt;/div>;
+}
+
+card.className = p-6 rounded-2xl border-2 transition-all duration-300 flex flex-col justify-between${statusClasses}; card.innerHTML =
+<div>
+<div class="flex justify-between items-start mb-2">
+<div><h3 class="text-xl font-black uppercase tracking-tight">{indicatorColor}"></div>
+</div>
+{p.id}', 'normal')" class="py-4 px-1 rounded-xl text-xs font-black uppercase border transition-transform active:scale-95 latex
+{p.status === 'normal' ? 'bg-green-600 border-green-400 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-slate-700 border-slate-600 text-slate-400 hover:bg-slate-600'}"&gt;Normal&lt;/button&gt; &lt;button onclick="setStatus('
+
+{p.id}', 'warning')" class="py-4 px-1 rounded-xl text-xs font-black uppercase border transition-transform active:scale-95 latex
+{p.status === 'warning' ? 'bg-amber-500 border-amber-300 text-slate-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 'bg-slate-700 border-slate-600 text-slate-400 hover:bg-slate-600'}"&gt;Help&lt;/button&gt; &lt;button onclick="setStatus('
+
+{p.id}', 'critical')" class="py-4 px-1 rounded-xl text-xs font-black uppercase border transition-transform active:scale-95 ${p.status === 'critical' ? 'bg-white border-red-500 text-red-600 shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-slate-700 border-slate-600 text-slate-400 hover:bg-slate-600'}"&gt;Fire&lt;/button&gt; &lt;/div&gt; &lt;/div&gt;;
+grid.appendChild(card);
+});
+updateStats();
+}
+
+function updateStats() {
+const statsBar = document.getElementById('statsBar');
+const total = processes.length;
+const critical = processes.filter(p => p.status === 'critical').length;
+const warning = processes.filter(p => p.status === 'warning').length;
+statsBar.innerHTML = &lt;div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center"&gt;&lt;p class="text-[10px] font-bold uppercase opacity-50"&gt;Total&lt;/p&gt;&lt;p class="text-2xl font-black"&gt;${total}</p></div>
+<div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center"><p class="text-[10px] text-green-500 font-bold uppercase">Active</p><p class="text-2xl font-black text-green-500">{warning}</p></div>
+<div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center"><p class="text-[10px] text-red-500 font-bold uppercase">Stop</p><p class="text-2xl font-black text-red-500">${critical}&lt;/p&gt;&lt;/div&gt;;
+}
+
+window.showSettingsModal = () => {
+document.getElementById('modalOverlay').classList.remove('hidden');
+document.getElementById('settingsModal').classList.remove('hidden');
+document.getElementById('statsModal').classList.add('hidden');
+};
+window.showStatsModal = () => {
+document.getElementById('modalOverlay').classList.remove('hidden');
+document.getElementById('statsModal').classList.remove('hidden');
+document.getElementById('settingsModal').classList.add('hidden');
+}
+window.closeModals = () => document.getElementById('modalOverlay').classList.add('hidden');
+window.updateTimeoutLabel = (v) => { warningTimeoutMinutes = parseInt(v); document.getElementById('timeoutLabel').innerText = v; };
+window.showToast = (msg, title, bg) => { const t = document.getElementById('alertToast'); t.firstElementChild.className = ``${bg} text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between`; document.getElementById('toastMsg').innerText = msg; document.getElementById('toastTitle').innerText = title; t.classList.remove('translate-y-32'); };
+window.dismissToast = () => document.getElementById('alertToast').classList.add('translate-y-32');
+
+document.getElementById('roomInput').addEventListener('keypress', (e) => {
+if (e.key === 'Enter') joinRoom();
+});
+</script>
+</body>
+</html>
