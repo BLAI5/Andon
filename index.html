@@ -9,182 +9,515 @@
 @keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
 .emergency-blink { animation: pulse-red 1s infinite; }
 button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.debug-log { font-family: monospace; font-size: 10px; color: #10b981; }
+.station-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; color: black !important; }
+    body { background: white !important; color: black !important; }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 12px; }
+    .print-header { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
+}
+.print-only { display: none; }
 </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans overflow-x-hidden">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden">
 
-<!-- Step 1: Room Selection -->
-<div id="setupOverlay" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
-<div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl">
-<div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-</div>
-<h2 class="text-2xl font-black text-center mb-2">Shop Connect</h2>
-<p class="text-slate-500 text-sm text-center mb-6">Enter Shop ID to sync all boards.</p>
-
-<input type="text" id="roomInput" placeholder="e.g. SHOP-A" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-center text-xl font-bold uppercase tracking-widest text-white outline-none focus:ring-2 focus:ring-blue-500">
-
-<button id="connectBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-lg transition-all active:scale-95 shadow-lg">
-CONNECT TO SHOP
-</button>
-
-<div id="debugOutput" class="mt-4 p-3 bg-black rounded-lg hidden">
-<p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Status Log:</p>
-<div id="logContent" class="debug-log"></div>
-</div>
-</div>
+<!-- Login Screen -->
+<div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[500] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
+        <h2 class="text-3xl font-black text-white mb-2">Join Shop Floor</h2>
+        <p class="text-slate-500 text-xs uppercase font-bold tracking-widest mb-8">Enter your shared team ID</p>
+        
+        <input type="text" id="shopIdInput" placeholder="e.g. assembly-line-1" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 text-white font-bold text-center mb-4 focus:outline-none focus:border-blue-500 transition-colors" autocomplete="off">
+        
+        <button onclick="joinShop()" id="joinBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wider py-4 rounded-xl transition-all active:scale-95">
+            Connect Live
+        </button>
+        <p id="loginError" class="text-red-500 text-xs font-bold mt-4 hidden">Connection failed. Please try again.</p>
+    </div>
 </div>
 
-<!-- Step 2: Main App -->
-<div id="mainApp" class="hidden max-w-6xl mx-auto p-4 pb-20">
-<header class="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-6">
-<div>
-<h1 id="headerTitle" class="font-black text-xl text-white">---</h1>
-<div class="flex items-center gap-2">
-<div id="syncDot" class="w-2 h-2 bg-red-500 rounded-full"></div>
-<span id="syncText" class="text-[10px] font-bold uppercase text-slate-500">Connecting...</span>
-</div>
-</div>
-<div class="flex gap-2">
-<button onclick="toggleLead()" id="leadBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold uppercase">Lead: OFF</button>
-<button onclick="location.reload()" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold uppercase">Reset</button>
-</div>
-</header>
+<div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print hidden">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-md shadow-2xl">
+        <div class="text-center md:text-left">
+            <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
+                <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
+                Shop Floor: <span id="displayShopId" class="text-blue-400"></span>
+            </h1>
+            <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
+        </div>
 
-<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-<!-- Stations injected here -->
+        <div class="flex items-center gap-2">
+            <button onclick="showMasterStats()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+                Master Stats 📊
+            </button>
+            <button onclick="resetStats()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
+                Clear Logs
+            </button>
+            <div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
+            <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
+                <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
+                Lead Mode
+            </button>
+            <button onclick="logoutShop()" class="ml-2 px-3 py-2.5 rounded-xl bg-red-900/30 text-red-400 hover:bg-red-800/50 border border-red-900/50 font-bold transition-all active:scale-95 text-xs">
+                Exit
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Stats Overview -->
+    <div id="statsBar" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"></div>
+
+    <!-- Station Grid -->
+    <div id="processGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
 </div>
+
+<!-- Master Stats Modal -->
+<div id="masterStatsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
+            <div>
+                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Shop-Wide Report</h2>
+                <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Consolidated Production Data</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs transition-all active:scale-95">Print Full Report</button>
+                <button onclick="closeMasterStats()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
+            </div>
+        </div>
+        <div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
+    </div>
+</div>
+
+<!-- Print View -->
+<div id="printView" class="print-only p-8">
+    <div class="print-header">
+        <h1 class="text-3xl font-bold uppercase">Shop Floor Production Report</h1>
+        <p id="printDate" class="text-sm font-bold mt-2"></p>
+    </div>
+    <div id="printTableContainer"></div>
+</div>
+
+<!-- Toast Notification -->
+<div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-80 transform translate-y-40 transition-transform duration-500 z-[300] no-print">
+    <div id="toastContainer" class="p-5 rounded-2xl shadow-2xl flex items-center justify-between bg-slate-800 text-white backdrop-blur-lg border border-white/10">
+        <div class="flex items-center gap-4">
+            <div id="toastIcon" class="bg-white/20 p-2 rounded-xl text-xl">⚠️</div>
+            <div>
+                <p id="toastTitle" class="text-[10px] font-black uppercase opacity-70 tracking-widest"></p>
+                <p id="toastMsg" class="font-bold text-lg"></p>
+            </div>
+        </div>
+        <button onclick="closeToast()" class="p-2 hover:bg-white/10 rounded-full transition-colors">✕</button>
+    </div>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, updateDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Your Firebase configuration
 const firebaseConfig = {
-apiKey: "AIzaSyD23yd-MlA4lMc1l95hgUulYE-4hIehRDg",
-authDomain: "andon-f8690.firebaseapp.com",
-databaseURL: "https://andon-f8690-default-rtdb.firebaseio.com",
-projectId: "andon-f8690",
-storageBucket: "andon-f8690.firebasestorage.app",
-messagingSenderId: "83350352802",
-appId: "1:83350352802:web:f3928af76cd3ebc62138fb",
-measurementId: "G-E3FJFMD04V"
+  apiKey: "AIzaSyD23yd-MlA4lMc1l95hgUulYE-4hIehRDg",
+  authDomain: "andon-f8690.firebaseapp.com",
+  databaseURL: "https://andon-f8690-default-rtdb.firebaseio.com",
+  projectId: "andon-f8690",
+  storageBucket: "andon-f8690.firebasestorage.app",
+  messagingSenderId: "83350352802",
+  appId: "1:83350352802:web:f3928af76cd3ebc62138fb",
+  measurementId: "G-E3FJFMD04V"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-const STATIONS = ['Installation', 'Millwork', 'Systems', 'Lamination', 'Upholstery', 'CNC', 'Finishing', 'Assembly'];
-let db, auth, activeRoom, isLead = false;
-let processes = [];
+const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
+const INITIAL_STATIONS = [
+    { id: 1, name: 'Installation', status: 'normal', history: {}, timer: null },
+    { id: 2, name: 'Millwork', status: 'normal', history: {}, timer: null },
+    { id: 3, name: 'Systems', status: 'normal', history: {}, timer: null },
+    { id: 4, name: 'Lamination', status: 'normal', history: {}, timer: null },
+    { id: 5, name: 'Upholstery', status: 'normal', history: {}, timer: null },
+    { id: 6, name: 'CNC', status: 'normal', history: {}, timer: null },
+    { id: 7, name: 'Finishing', status: 'normal', history: {}, timer: null },
+    { id: 8, name: 'Assembly', status: 'normal', history: {}, timer: null }
+];
 
-function log(msg) {
-const out = document.getElementById('debugOutput');
-const content = document.getElementById('logContent');
-out.classList.remove('hidden');
-content.innerHTML += > ${msg}<br>`;
-console.log(msg);
+let stations = [...INITIAL_STATIONS];
+let isLeadMode = false;
+let ticker = null;
+let currentShopId = localStorage.getItem('andon_shop_id') || "";
+let shopDocRef = null;
+let unsubscribeFirestore = null;
+
+// --- Login & Firebase Flow ---
+
+// Auto-fill last used shop ID
+if (currentShopId) {
+    document.getElementById('shopIdInput').value = currentShopId;
 }
 
-document.getElementById('connectBtn').onclick = async () => {
-const input = document.getElementById('roomInput').value.trim().toUpperCase();
-if(!input) return;
+window.joinShop = async () => {
+    const shopId = document.getElementById('shopIdInput').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    if (!shopId) {
+        document.getElementById('loginError').innerText = "Please enter a valid Shop ID";
+        document.getElementById('loginError').classList.remove('hidden');
+        return;
+    }
+    
+    const btn = document.getElementById('joinBtn');
+    btn.innerText = "Connecting...";
+    btn.disabled = true;
 
-activeRoom = input;
-log(Attempting connection to${input}...`);
-
-try {
-const app = initializeApp(firebaseConfig);
-auth = getAuth(app);
-db = getFirestore(app);
-
-log("Firebase Initialized.");
-
-await signInAnonymously(auth);
-log("Logged in anonymously.");
-
-startSync();
-
-document.getElementById('setupOverlay').classList.add('hidden');
-document.getElementById('mainApp').classList.remove('hidden');
-document.getElementById('headerTitle').innerText = SHOP: ${activeRoom}`;
-
-} catch (err) {
-log(ERROR:${err.message}`);
+    try {
+        await signInAnonymously(auth);
+        
+        currentShopId = shopId;
+        localStorage.setItem('andon_shop_id', shopId);
+        document.getElementById('displayShopId').innerText = shopId.toUpperCase();
+        
+        shopDocRef = doc(db, 'shops', shopId);
+        
+        // Listen to live data from Firestore
+        unsubscribeFirestore = onSnapshot(shopDocRef, (snapshot) => {
+            if (snapshot.exists()) {
+                stations = snapshot.data().stations;
+                render();
+            } else {
+                // If this is a brand new shop ID, create it in the database
+                setDoc(shopDocRef, { stations: INITIAL_STATIONS });
+                stations = [...INITIAL_STATIONS];
+                render();
+            }
+            
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            
+            startTicker();
+        }, (error) => {
+            console.error("Firestore error:", error);
+            alert("Connection to live server lost.");
+        });
+        
+    } catch (error) {
+        console.error("Auth error:", error);
+        document.getElementById('loginError').innerText = "Connection failed. Please try again.";
+        document.getElementById('loginError').classList.remove('hidden');
+        btn.innerText = "Connect Live";
+        btn.disabled = false;
+    }
 }
-};
 
-function startSync() {
-const path = artifacts/andon-v2/public/data/${activeRoom}/stations`;
-
-onSnapshot(collection(db, path), (snap) => {
-document.getElementById('syncDot').className = "w-2 h-2 bg-green-500 rounded-full shadow-[0_0_5px_green]";
-document.getElementById('syncText').innerText = "Live Sync Active";
-
-if(snap.empty) {
-log("Creating stations for the first time...");
-STATIONS.forEach((name, i) => {
-setDoc(doc(db, path, st-${i}), { name, status: 'normal', order: i }); }); } else { processes = snap.docs.map(d =&gt; ({ id: d.id, ...d.data() })).sort((a,b) =&gt; a.order - b.order); render(); } }, (err) =&gt; { log(Sync Error: ${err.message});
-document.getElementById('syncDot').className = "w-2 h-2 bg-red-500 rounded-full";
-document.getElementById('syncText').innerText = "Sync Failed";
+// Allow pressing "Enter" to submit
+document.getElementById('shopIdInput').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        window.joinShop();
+    }
 });
-}
 
-window.updateStatus = async (id, status) => {
-const path = artifacts/andon-v2/public/data/${activeRoom}/stations`;
-try {
-await updateDoc(doc(db, path, id), { status });
-} catch (e) {
-alert("Update failed: " + e.message);
-}
+window.logoutShop = () => {
+    if (unsubscribeFirestore) unsubscribeFirestore();
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('joinBtn').innerText = "Connect Live";
+    document.getElementById('joinBtn').disabled = false;
 };
 
-window.toggleLead = () => {
-isLead = !isLead;
-const btn = document.getElementById('leadBtn');
-btn.innerText = isLead ? "Lead: ON" : "Lead: OFF";
-btn.classList.toggle('bg-blue-600', isLead);
-btn.classList.toggle('border-blue-400', isLead);
+// --- Audio Engine ---
+let audioCtx = null;
+let masterGain = null;
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+
+    // Keep audio context alive
+    setInterval(() => {
+        if (audioCtx?.state === 'suspended') audioCtx.resume();
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.0001;
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    }, 5000);
+}
+
+function playHelpSound() {
+    if (!isLeadMode || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.3, now + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(now); osc.stop(now + 0.8);
+}
+
+function playEmergencySound() {
+    if (!isLeadMode || !audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    [0, 0.2, 0.4].forEach(offset => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1200, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(600, now + offset + 0.15);
+        g.gain.setValueAtTime(0, now + offset);
+        g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(now + offset); osc.stop(now + offset + 0.15);
+    });
+}
+
+// --- Core Logic ---
+
+async function save() {
+    if (!shopDocRef) return;
+    try {
+        await updateDoc(shopDocRef, { stations: stations });
+    } catch (error) {
+        console.error("Error saving data to cloud:", error);
+    }
+}
+
+function getToday() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function startTicker() {
+    if (ticker) return;
+    ticker = setInterval(() => {
+        let changed = false;
+        stations.forEach(s => {
+            if (s.status === 'warning' && s.timer > 0) {
+                s.timer--;
+                changed = true;
+                if (s.timer === 0) {
+                    // Update locally, then save to cloud so everyone gets the escalation
+                    updateStatus(s.id, 'critical', true);
+                }
+            }
+        });
+        if (changed) {
+            render();
+            save(); // Sync timer changes occasionally so late joiners see correct time
+        }
+    }, 1000);
+}
+
+window.updateStatus = (id, newStatus, isEscalation = false) => {
+    const station = stations.find(s => s.id === id);
+    if (!station || (station.status === newStatus && !isEscalation)) return;
+
+    const oldStatus = station.status;
+    const today = getToday();
+
+    if (!station.history[today]) {
+        station.history[today] = { help: 0, stop: 0 };
+    }
+
+    station.status = newStatus;
+
+    if (newStatus === 'warning') {
+        station.timer = HELP_TIMEOUT_SECONDS;
+        station.history[today].help++;
+        if (isLeadMode) playHelpSound();
+    } else {
+        station.timer = null;
+    }
+
+    if (newStatus === 'critical') {
+        station.history[today].stop++;
+        if (isLeadMode) playEmergencySound();
+    }
+
+    if (isLeadMode && newStatus !== 'normal' && oldStatus === 'normal') {
+        triggerToast(station);
+    }
+
+    render();
+    save(); // Push to Firestore
 };
+
+function formatTime(seconds) {
+    if (seconds === null || seconds === undefined) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+window.showMasterStats = () => {
+    const content = document.getElementById('masterStatsContent');
+    const printContainer = document.getElementById('printTableContainer');
+    document.getElementById('printDate').innerText = `Generated: ${new Date().toLocaleString()} (Shop: ${currentShopId})`;
+    content.innerHTML = '';
+    printContainer.innerHTML = '';
+
+    const allDates = new Set();
+    stations.forEach(s => Object.keys(s.history).forEach(d => allDates.add(d)));
+    const sortedDates = Array.from(allDates).sort().reverse();
+
+    if (sortedDates.length === 0) {
+        content.innerHTML = '<p class="text-center py-20 text-slate-500 font-bold uppercase">No data recorded</p>';
+        return;
+    }
+
+    sortedDates.forEach(date => {
+        const dateLabel = new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        const tableHtml = `<table class="w-full text-left mt-4 mb-10">
+            <thead>
+                <tr class="text-[10px] text-slate-500 font-black uppercase">
+                    <th class="pb-4">Sector</th>
+                    <th class="pb-4">Help Requests</th>
+                    <th class="pb-4">Stoppages</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                ${stations.map(s => {
+                    const data = s.history[date] || { help: 0, stop: 0 };
+                    return `<tr><td class="py-3 font-bold text-white">${s.name}</td><td class="py-3 font-black text-amber-500">${data.help}</td><td class="py-3 font-black text-red-500">${data.stop}</td></tr>`; 
+                }).join('')}
+            </tbody>
+        </table>`;
+        content.innerHTML += `<div class="sticky top-0 bg-slate-900 py-2 border-b border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest z-10">${dateLabel}</div>${tableHtml}`;
+
+        printContainer.innerHTML += `<h2>${dateLabel}</h2>
+        <table class="print-table">
+            <thead>
+                <tr><th>Station</th><th>Help Calls</th><th>Stoppages</th></tr>
+            </thead>
+            <tbody>
+                ${stations.map(s => {
+                    const data = s.history[date] || { help: 0, stop: 0 }; 
+                    return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td></tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+    });
+    document.getElementById('masterStatsModal').classList.remove('hidden');
+};
+
+window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
+
+window.toggleLeadMode = () => {
+    initAudio();
+    isLeadMode = !isLeadMode;
+    const btn = document.getElementById('leadBtn');
+    const dot = document.getElementById('leadStatusDot');
+    if (isLeadMode) {
+        btn.classList.replace('bg-slate-800', 'bg-blue-600');
+        btn.classList.replace('border-slate-700', 'border-blue-400');
+        dot.classList.replace('bg-slate-500', 'bg-white');
+    } else {
+        btn.classList.replace('bg-blue-600', 'bg-slate-800');
+        btn.classList.replace('border-blue-400', 'border-slate-700');
+        dot.classList.replace('bg-white', 'bg-slate-500');
+    }
+};
+
+window.resetStats = () => {
+    if(confirm("Clear all logs for ALL users connected to this Shop ID?")) {
+        stations = INITIAL_STATIONS.map(s => ({ ...s, history: {} }));
+        save(); // Will automatically push down to all clients and trigger render()
+        render();
+    }
+};
+
+function triggerToast(station) {
+    const toast = document.getElementById('alertToast');
+    document.getElementById('toastTitle').innerText = station.status === 'critical' ? "Production Stopped" : "Assistance Needed";
+    document.getElementById('toastMsg').innerText = station.name;
+    toast.classList.remove('translate-y-40');
+    setTimeout(() => toast.classList.add('translate-y-40'), 5000);
+}
+
+window.closeToast = () => document.getElementById('alertToast').classList.add('translate-y-40');
 
 function render() {
-const grid = document.getElementById('grid');
-grid.innerHTML = '';
+    const today = getToday();
+    let totalHelp = 0, totalStop = 0;
+    
+    stations.forEach(s => { 
+        if(s.history[today]) { 
+            totalHelp += s.history[today].help; 
+            totalStop += s.history[today].stop; 
+        } 
+    });
+    
+    const activeIssues = stations.filter(s => s.status !== 'normal').length;
+    const health = Math.round(((stations.length - activeIssues) / stations.length) * 100);
 
-processes.forEach(p => {
-const card = document.createElement('div');
-let bg = "bg-slate-900 border-slate-800";
-let dot = "bg-green-500";
+    document.getElementById('statsBar').innerHTML = `
+        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Health</p>
+            <p class="text-2xl font-black ${health > 70 ? 'text-green-500' : 'text-amber-500'}">${health}%</p>
+        </div>
+        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Help</p>
+            <p class="text-2xl font-black text-amber-500">${totalHelp}</p>
+        </div>
+        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Stops</p>
+            <p class="text-2xl font-black text-red-500">${totalStop}</p>
+        </div>
+        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Active Alerts</p>
+            <p class="text-2xl font-black text-white">${activeIssues}</p>
+        </div>`;
 
-if(p.status === 'warning') {
-bg = "bg-amber-500/10 border-amber-500/50";
-dot = "bg-amber-500 shadow-[0_0_10px_orange]";
-} else if(p.status === 'critical') {
-bg = "emergency-blink border-red-500";
-dot = "bg-white";
-}
-
-card.className = ${bg} border-2 p-5 rounded-2xl transition-all duration-300; card.innerHTML =
-<div class="flex justify-between items-start mb-6">
-<h3 class="font-black text-sm uppercase tracking-tight">${p.name}&lt;/h3&gt; &lt;div class="w-3 h-3 rounded-full ${dot}"></div>
-</div>
-<div class="grid grid-cols-3 gap-2">
-<button onclick="updateStatus('${p.id}', 'normal')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'normal' ? 'bg-green-600 border-green-400' : 'bg-slate-800 border-slate-700'}">Run</button>
-<button onclick="updateStatus('${p.id}', 'warning')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'warning' ? 'bg-amber-500 border-amber-300 text-black' : 'bg-slate-800 border-slate-700'}">Help</button>
-<button onclick="updateStatus('${p.id}', 'critical')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'critical' ? 'bg-white text-red-600 border-white' : 'bg-slate-800 border-slate-700'}"&gt;Stop&lt;/button&gt; &lt;/div&gt;;
-grid.appendChild(card);
-});
+    const grid = document.getElementById('processGrid');
+    grid.innerHTML = '';
+    
+    stations.forEach(s => {
+        const dayData = s.history[today] || { help: 0, stop: 0 };
+        let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
+        const card = document.createElement('div');
+        card.className = `station-card border-2 p-5 rounded-3xl ${bg}`; 
+        
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-black text-sm uppercase text-white mb-1">${s.name}</h3>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] font-black text-amber-500" title="Help Calls Today">${dayData.help}H</span>
+                        <span class="text-[10px] font-black text-red-500" title="Stoppages Today">${dayData.stop}S</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-black ${s.timer !== null && s.timer < 60 ? 'text-red-500' : 'text-white'}">
+                        ${formatTime(s.timer)}
+                    </div>
+                    <div class="text-[8px] font-black uppercase text-slate-500">
+                        ${s.status === 'warning' ? 'Escalation Timer' : '&nbsp;'}
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-6">
+                <button onclick="updateStatus(${s.id}, 'normal')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'normal' ? 'bg-green-600 border border-green-400 text-white' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">OK</button>
+                <button onclick="updateStatus(${s.id}, 'warning')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'warning' ? 'bg-amber-500 border border-amber-300 text-black' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">HELP</button>
+                <button onclick="updateStatus(${s.id}, 'critical')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'critical' ? 'bg-white border border-white text-red-600' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">STOP</button>
+            </div>`;
+            
+        grid.appendChild(card);
+    });
 }
 </script>
 </body>
