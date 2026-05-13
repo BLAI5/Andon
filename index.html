@@ -50,14 +50,22 @@ button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
             <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-2">
+            <!-- Hidden by default, shown in lead mode -->
+            <button onclick="openQuestions()" id="questionsBtn" class="hidden px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-teal-900/20">
+                Questions 📋
+            </button>
+            <button onclick="openManageStations()" id="manageStationsBtn" class="hidden px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-purple-900/20">
+                Manage Stations ⚙️
+            </button>
+            
             <button onclick="showMasterStats()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
                 Master Stats 📊
             </button>
             <button onclick="resetStats()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
                 Clear Logs
             </button>
-            <div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
+            <div class="h-8 w-[1px] bg-slate-800 mx-2 hidden sm:block"></div>
             <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
                 <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
                 Lead Mode
@@ -89,6 +97,92 @@ button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
             </div>
         </div>
         <div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
+    </div>
+</div>
+
+<!-- Manage Stations Modal -->
+<div id="manageStationsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
+            <h2 class="text-2xl font-black uppercase tracking-tight text-white">Manage Stations</h2>
+            <button onclick="closeManageStations()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-4" id="manageStationsList">
+            <!-- Dynamically populated -->
+        </div>
+        <div class="p-6 border-t border-white/5 bg-slate-800/30 flex justify-between">
+            <button onclick="addStation()" class="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-black uppercase text-xs transition-all text-white">Add Station +</button>
+            <button onclick="saveStations()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all text-white shadow-lg shadow-blue-900/20">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Questions Guide Modal -->
+<div id="questionsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 border border-white/10 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
+            <div>
+                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Response Guide</h2>
+                <p class="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Lead Incident Checklist</p>
+            </div>
+            <button onclick="closeQuestions()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-6">
+            
+            <!-- Section 1 -->
+            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
+                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-sm font-black border border-red-500/30">1</span>
+                    Safety and Containment <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">Immediate Response</span>
+                </h3>
+                <ul class="space-y-3 text-sm text-slate-300 font-medium">
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Is everyone safe?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Safety is always the first priority).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What specifically happened to cause the stop?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Defect, machine breakdown, material shortage, or safety issue).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Is the problem contained?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Ensuring defective parts do not move to the next station).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What is the symptom of the issue?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Fixing the symptom to get the line moving). [1, 2]</span></div></li>
+                </ul>
+            </div>
+
+            <!-- Section 2 -->
+            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
+                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center text-sm font-black border border-amber-500/30">2</span>
+                    Diagnosis and Root Cause <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">5 Whys Analysis</span>
+                </h3>
+                <ul class="space-y-3 text-sm text-slate-300 font-medium">
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Why did this happen?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Asking "Why" multiple times to find the root cause, not just the symptom).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Was the machine running to standard?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Checking if the operator was following standardized work).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What changed?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Was it new materials, a change in personnel, or a tool change?)</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Did the yellow light happen first?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Checking if the issue was ignored or if it escalated too quickly). [1, 2, 3]</span></div></li>
+                </ul>
+            </div>
+
+            <!-- Section 3 -->
+            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
+                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-sm font-black border border-green-500/30">3</span>
+                    Immediate Action <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">And Future Prevention</span>
+                </h3>
+                <ul class="space-y-3 text-sm text-slate-300 font-medium">
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"How can we get the line running again safely?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Focusing on a quick, safe restart).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Do we need maintenance or engineering support?"</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What is our plan to prevent this from happening again?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Updating work standards or fixing equipment to ensure the issue does not recur).</span></div></li>
+                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Do we need to update our standard operating procedures (SOPs) based on this?"</span> <span class="text-slate-400 text-xs block mt-0.5">[1, 2, 3]</span></div></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[600] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-white/10 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+        <h3 class="text-xl font-black text-white mb-4" id="confirmMsg">Are you sure?</h3>
+        <div class="flex gap-4 justify-center mt-8">
+            <button onclick="closeConfirm()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold transition-all text-white">Cancel</button>
+            <button onclick="executeConfirm()" class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 font-bold transition-all text-white shadow-lg shadow-red-900/20">Confirm</button>
+        </div>
     </div>
 </div>
 
@@ -132,21 +226,20 @@ const firebaseConfig = {
   measurementId: "G-E3FJFMD04V"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
 const INITIAL_STATIONS = [
-    { id: 1, name: 'Installation', status: 'normal', history: {}, timer: null },
-    { id: 2, name: 'Millwork', status: 'normal', history: {}, timer: null },
-    { id: 3, name: 'Systems', status: 'normal', history: {}, timer: null },
-    { id: 4, name: 'Lamination', status: 'normal', history: {}, timer: null },
-    { id: 5, name: 'Upholstery', status: 'normal', history: {}, timer: null },
-    { id: 6, name: 'CNC', status: 'normal', history: {}, timer: null },
-    { id: 7, name: 'Finishing', status: 'normal', history: {}, timer: null },
-    { id: 8, name: 'Assembly', status: 'normal', history: {}, timer: null }
+    { id: 1, name: 'Installation', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 2, name: 'Millwork', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 3, name: 'Systems', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 4, name: 'Lamination', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 5, name: 'Upholstery', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 6, name: 'CNC', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 7, name: 'Finishing', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
+    { id: 8, name: 'Assembly', status: 'normal', history: {}, warningAt: null, stoppedAt: null }
 ];
 
 let stations = [...INITIAL_STATIONS];
@@ -156,9 +249,25 @@ let currentShopId = localStorage.getItem('andon_shop_id') || "";
 let shopDocRef = null;
 let unsubscribeFirestore = null;
 
-// --- Login & Firebase Flow ---
+// --- Custom Confirm Modal Logic ---
+let confirmCallback = null;
+window.customConfirm = (msg, callback) => {
+    document.getElementById('confirmMsg').innerText = msg;
+    document.getElementById('confirmModal').classList.remove('hidden');
+    confirmCallback = callback;
+};
 
-// Auto-fill last used shop ID
+window.closeConfirm = () => {
+    document.getElementById('confirmModal').classList.add('hidden');
+    confirmCallback = null;
+};
+
+window.executeConfirm = () => {
+    if (confirmCallback) confirmCallback();
+    closeConfirm();
+};
+
+// --- Login & Firebase Flow ---
 if (currentShopId) {
     document.getElementById('shopIdInput').value = currentShopId;
 }
@@ -184,7 +293,6 @@ window.joinShop = async () => {
         
         shopDocRef = doc(db, 'shops', shopId);
         
-        // Listen to live data from Firestore
         unsubscribeFirestore = onSnapshot(shopDocRef, (snapshot) => {
             if (snapshot.exists()) {
                 const incomingStations = snapshot.data().stations;
@@ -208,7 +316,6 @@ window.joinShop = async () => {
                 stations = incomingStations;
                 render();
             } else {
-                // If this is a brand new shop ID, create it in the database
                 setDoc(shopDocRef, { stations: INITIAL_STATIONS });
                 stations = [...INITIAL_STATIONS];
                 render();
@@ -232,7 +339,6 @@ window.joinShop = async () => {
     }
 }
 
-// Allow pressing "Enter" to submit
 document.getElementById('shopIdInput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         window.joinShop();
@@ -258,7 +364,6 @@ function initAudio() {
     masterGain = audioCtx.createGain();
     masterGain.connect(audioCtx.destination);
 
-    // Keep audio context alive
     setInterval(() => {
         if (audioCtx?.state === 'suspended') audioCtx.resume();
         const oscillator = audioCtx.createOscillator();
@@ -323,20 +428,23 @@ function startTicker() {
     if (ticker) return;
     ticker = setInterval(() => {
         let changed = false;
+        const now = Date.now();
+        
         stations.forEach(s => {
-            if (s.status === 'warning' && s.timer > 0) {
-                s.timer--;
-                changed = true;
-                if (s.timer === 0) {
-                    // Update locally, then save to cloud so everyone gets the escalation
+            if (s.status === 'warning' && s.warningAt) {
+                const elapsed = Math.floor((now - s.warningAt) / 1000);
+                const remaining = Math.max(0, HELP_TIMEOUT_SECONDS - elapsed);
+                if (remaining === 0) {
                     updateStatus(s.id, 'critical', true);
+                } else {
+                    changed = true; // Redraw the UI countdown timer
                 }
+            } else if (s.status === 'critical') {
+                changed = true; // Redraw the UI downtime duration timer
             }
         });
-        if (changed) {
-            render();
-            save(); // Sync timer changes occasionally so late joiners see correct time
-        }
+        
+        if (changed) render();
     }, 1000);
 }
 
@@ -348,20 +456,30 @@ window.updateStatus = (id, newStatus, isEscalation = false) => {
     const today = getToday();
 
     if (!station.history[today]) {
-        station.history[today] = { help: 0, stop: 0 };
+        station.history[today] = { help: 0, stop: 0, downtime: 0 };
+    }
+
+    // Capture downtime when resolving a STOP
+    if (oldStatus === 'critical' && newStatus !== 'critical') {
+        if (station.stoppedAt) {
+            const durationSeconds = Math.floor((Date.now() - station.stoppedAt) / 1000);
+            station.history[today].downtime = (station.history[today].downtime || 0) + durationSeconds;
+            station.stoppedAt = null;
+        }
     }
 
     station.status = newStatus;
 
     if (newStatus === 'warning') {
-        station.timer = HELP_TIMEOUT_SECONDS;
+        station.warningAt = Date.now();
         station.history[today].help++;
         if (isLeadMode) playHelpSound();
     } else {
-        station.timer = null;
+        station.warningAt = null;
     }
 
     if (newStatus === 'critical') {
+        if (!station.stoppedAt) station.stoppedAt = Date.now();
         station.history[today].stop++;
         if (isLeadMode) playEmergencySound();
     }
@@ -375,9 +493,11 @@ window.updateStatus = (id, newStatus, isEscalation = false) => {
 };
 
 function formatTime(seconds) {
-    if (seconds === null || seconds === undefined) return "";
-    const m = Math.floor(seconds / 60);
+    if (seconds === null || seconds === undefined) return "&nbsp;";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -406,12 +526,20 @@ window.showMasterStats = () => {
                     <th class="pb-4">Sector</th>
                     <th class="pb-4">Help Requests</th>
                     <th class="pb-4">Stoppages</th>
+                    <th class="pb-4">Total Downtime</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-white/5">
                 ${stations.map(s => {
-                    const data = s.history[date] || { help: 0, stop: 0 };
-                    return `<tr><td class="py-3 font-bold text-white">${s.name}</td><td class="py-3 font-black text-amber-500">${data.help}</td><td class="py-3 font-black text-red-500">${data.stop}</td></tr>`; 
+                    const data = s.history[date] || { help: 0, stop: 0, downtime: 0 };
+                    const downMins = Math.ceil((data.downtime || 0) / 60);
+                    const displayDown = downMins > 0 ? `${downMins} min` : '-';
+                    return `<tr>
+                        <td class="py-3 font-bold text-white">${s.name}</td>
+                        <td class="py-3 font-black text-amber-500">${data.help}</td>
+                        <td class="py-3 font-black text-red-500">${data.stop}</td>
+                        <td class="py-3 font-black text-slate-400">${displayDown}</td>
+                    </tr>`; 
                 }).join('')}
             </tbody>
         </table>`;
@@ -420,12 +548,13 @@ window.showMasterStats = () => {
         printContainer.innerHTML += `<h2>${dateLabel}</h2>
         <table class="print-table">
             <thead>
-                <tr><th>Station</th><th>Help Calls</th><th>Stoppages</th></tr>
+                <tr><th>Station</th><th>Help Calls</th><th>Stoppages</th><th>Downtime</th></tr>
             </thead>
             <tbody>
                 ${stations.map(s => {
-                    const data = s.history[date] || { help: 0, stop: 0 }; 
-                    return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td></tr>`;
+                    const data = s.history[date] || { help: 0, stop: 0, downtime: 0 }; 
+                    const downMins = Math.ceil((data.downtime || 0) / 60);
+                    return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td><td>${downMins} min</td></tr>`;
                 }).join('')}
             </tbody>
         </table>`;
@@ -435,28 +564,102 @@ window.showMasterStats = () => {
 
 window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
 
+// --- Dynamic Station Management ---
+window.openManageStations = () => {
+    const list = document.getElementById('manageStationsList');
+    list.innerHTML = '';
+    stations.forEach(s => {
+        list.innerHTML += `
+            <div class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl" id="edit-station-${s.id}">
+                <input type="text" id="station-name-input-${s.id}" value="${s.name}" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 outline-none transition-colors">
+                <button onclick="removeStation(${s.id})" class="px-5 py-3 bg-red-900/30 border border-red-900/50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg font-black transition-all active:scale-95 text-xs uppercase">Delete</button>
+            </div>
+        `;
+    });
+    document.getElementById('manageStationsModal').classList.remove('hidden');
+};
+
+window.closeManageStations = () => {
+    document.getElementById('manageStationsModal').classList.add('hidden');
+};
+
+// --- Questions Guide Modal ---
+window.openQuestions = () => {
+    document.getElementById('questionsModal').classList.remove('hidden');
+};
+
+window.closeQuestions = () => {
+    document.getElementById('questionsModal').classList.add('hidden');
+};
+
+window.addStation = () => {
+    const newId = Date.now();
+    stations.push({ 
+        id: newId, 
+        name: 'New Station', 
+        status: 'normal', 
+        history: {},
+        warningAt: null,
+        stoppedAt: null
+    });
+    openManageStations(); 
+};
+
+window.removeStation = (id) => {
+    customConfirm("Delete this station permanently?", () => {
+        stations = stations.filter(s => s.id !== id);
+        openManageStations();
+    });
+};
+
+window.saveStations = () => {
+    stations.forEach(s => {
+        const input = document.getElementById(`station-name-input-${s.id}`);
+        if (input) {
+            s.name = input.value.trim() || 'Unnamed Station';
+        }
+    });
+    save(); // Push configuration changes to all connected displays
+    render();
+    closeManageStations();
+};
+
 window.toggleLeadMode = () => {
     initAudio();
     isLeadMode = !isLeadMode;
     const btn = document.getElementById('leadBtn');
     const dot = document.getElementById('leadStatusDot');
+    const manageBtn = document.getElementById('manageStationsBtn');
+    const questionsBtn = document.getElementById('questionsBtn');
+    
     if (isLeadMode) {
         btn.classList.replace('bg-slate-800', 'bg-blue-600');
         btn.classList.replace('border-slate-700', 'border-blue-400');
         dot.classList.replace('bg-slate-500', 'bg-white');
+        manageBtn.classList.remove('hidden'); // Reveal Manage Stations button
+        questionsBtn.classList.remove('hidden'); // Reveal Questions button
     } else {
         btn.classList.replace('bg-blue-600', 'bg-slate-800');
         btn.classList.replace('border-blue-400', 'border-slate-700');
         dot.classList.replace('bg-white', 'bg-slate-500');
+        manageBtn.classList.add('hidden'); // Hide Manage Stations button
+        questionsBtn.classList.add('hidden'); // Hide Questions button
     }
 };
 
 window.resetStats = () => {
-    if(confirm("Clear all logs for ALL users connected to this Shop ID?")) {
-        stations = INITIAL_STATIONS.map(s => ({ ...s, history: {} }));
-        save(); // Will automatically push down to all clients and trigger render()
+    customConfirm("Clear all logs for ALL users connected to this Shop ID?", () => {
+        stations.forEach(s => {
+            s.history = {};
+            if (s.status !== 'normal') {
+                s.status = 'normal';
+                s.warningAt = null;
+                s.stoppedAt = null;
+            }
+        });
+        save();
         render();
-    }
+    });
 };
 
 function triggerToast(station) {
@@ -471,17 +674,19 @@ window.closeToast = () => document.getElementById('alertToast').classList.add('t
 
 function render() {
     const today = getToday();
-    let totalHelp = 0, totalStop = 0;
+    let totalHelp = 0, totalStop = 0, totalDownSeconds = 0;
     
     stations.forEach(s => { 
         if(s.history[today]) { 
             totalHelp += s.history[today].help; 
             totalStop += s.history[today].stop; 
+            totalDownSeconds += (s.history[today].downtime || 0);
         } 
     });
     
     const activeIssues = stations.filter(s => s.status !== 'normal').length;
-    const health = Math.round(((stations.length - activeIssues) / stations.length) * 100);
+    const health = stations.length > 0 ? Math.round(((stations.length - activeIssues) / stations.length) * 100) : 100;
+    const totalDownDisplay = totalDownSeconds > 0 ? Math.ceil(totalDownSeconds / 60) + ' min' : '0 min';
 
     document.getElementById('statsBar').innerHTML = `
         <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
@@ -497,35 +702,52 @@ function render() {
             <p class="text-2xl font-black text-red-500">${totalStop}</p>
         </div>
         <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
-            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Active Alerts</p>
-            <p class="text-2xl font-black text-white">${activeIssues}</p>
+            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Total Downtime</p>
+            <p class="text-2xl font-black text-slate-300">${totalDownDisplay}</p>
         </div>`;
 
     const grid = document.getElementById('processGrid');
     grid.innerHTML = '';
     
     stations.forEach(s => {
-        const dayData = s.history[today] || { help: 0, stop: 0 };
+        const dayData = s.history[today] || { help: 0, stop: 0, downtime: 0 };
+        const totalDownMins = Math.ceil((dayData.downtime || 0) / 60);
+        
         let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
+        
+        let displayTimer = "&nbsp;";
+        let timerColor = "text-slate-500";
+        let timerLabel = "&nbsp;";
+
+        if (s.status === 'warning') {
+            const elapsed = s.warningAt ? Math.floor((Date.now() - s.warningAt) / 1000) : 0;
+            const remaining = Math.max(0, HELP_TIMEOUT_SECONDS - elapsed);
+            displayTimer = formatTime(remaining);
+            timerColor = remaining < 60 ? 'text-red-500' : 'text-amber-400';
+            timerLabel = 'Escalation Timer';
+        } else if (s.status === 'critical') {
+            const currentDown = s.stoppedAt ? Math.floor((Date.now() - s.stoppedAt) / 1000) : 0;
+            displayTimer = formatTime(currentDown);
+            timerColor = 'text-red-500';
+            timerLabel = 'Active Downtime';
+        }
+        
         const card = document.createElement('div');
         card.className = `station-card border-2 p-5 rounded-3xl ${bg}`; 
         
         card.innerHTML = `
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="font-black text-sm uppercase text-white mb-1">${s.name}</h3>
+                    <h3 class="font-black text-sm uppercase text-white mb-2">${s.name}</h3>
                     <div class="flex gap-2">
                         <span class="text-[10px] font-black text-amber-500" title="Help Calls Today">${dayData.help}H</span>
                         <span class="text-[10px] font-black text-red-500" title="Stoppages Today">${dayData.stop}S</span>
+                        ${totalDownMins > 0 ? `<span class="text-[10px] font-black text-slate-400" title="Total Downtime Mins">${totalDownMins}m Down</span>` : ''}
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="text-2xl font-black ${s.timer !== null && s.timer < 60 ? 'text-red-500' : 'text-white'}">
-                        ${formatTime(s.timer)}
-                    </div>
-                    <div class="text-[8px] font-black uppercase text-slate-500">
-                        ${s.status === 'warning' ? 'Escalation Timer' : '&nbsp;'}
-                    </div>
+                    <div class="text-2xl font-black ${timerColor}">${displayTimer}</div>
+                    <div class="text-[8px] font-black uppercase text-slate-500">${timerLabel}</div>
                 </div>
             </div>
             <div class="grid grid-cols-3 gap-2 mt-6">
