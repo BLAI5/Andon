@@ -187,7 +187,25 @@ window.joinShop = async () => {
         // Listen to live data from Firestore
         unsubscribeFirestore = onSnapshot(shopDocRef, (snapshot) => {
             if (snapshot.exists()) {
-                stations = snapshot.data().stations;
+                const incomingStations = snapshot.data().stations;
+                
+                // Check for remote status changes to trigger Lead Mode audio/toasts
+                incomingStations.forEach(incoming => {
+                    const current = stations.find(s => s.id === incoming.id);
+                    if (current && current.status !== incoming.status) {
+                        if (incoming.status === 'warning') {
+                            if (isLeadMode) playHelpSound();
+                        } else if (incoming.status === 'critical') {
+                            if (isLeadMode) playEmergencySound();
+                        }
+                        
+                        if (isLeadMode && incoming.status !== 'normal' && current.status === 'normal') {
+                            triggerToast(incoming);
+                        }
+                    }
+                });
+
+                stations = incomingStations;
                 render();
             } else {
                 // If this is a brand new shop ID, create it in the database
