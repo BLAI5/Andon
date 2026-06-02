@@ -1,770 +1,443 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Digital Andon System</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-@keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
-.emergency-blink { animation: pulse-red 1s infinite; }
-button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.station-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-
-@media print {
-    .no-print { display: none !important; }
-    .print-only { display: block !important; color: black !important; }
-    body { background: white !important; color: black !important; }
-    .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    .print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 12px; }
-    .print-header { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-}
-.print-only { display: none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Digital Andon System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
+        .emergency-blink { animation: pulse-red 1s infinite; }
+        button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .station-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; color: black !important; }
+            body { background: white !important; color: black !important; }
+            .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 12px; }
+            .print-header { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
+        }
+        .print-only { display: none; }
+    </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden">
 
-<!-- Login Screen -->
-<div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[500] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
-        <h2 class="text-3xl font-black text-white mb-2">Join Shop Floor</h2>
-        <p class="text-slate-500 text-xs uppercase font-bold tracking-widest mb-8">Enter your shared team ID</p>
-        
-        <input type="text" id="shopIdInput" placeholder="e.g. assembly-line-1" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 text-white font-bold text-center mb-4 focus:outline-none focus:border-blue-500 transition-colors" autocomplete="off">
-        
-        <button onclick="joinShop()" id="joinBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wider py-4 rounded-xl transition-all active:scale-95">
-            Connect Live
-        </button>
-        <p id="loginError" class="text-red-500 text-xs font-bold mt-4 hidden">Connection failed. Please try again.</p>
+    <div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-md shadow-2xl">
+            <div class="text-center md:text-left">
+                <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
+                    <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
+                    Shop Floor Monitor
+                </h1>
+                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="showMasterStats()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+                    Master Stats 📊
+                </button>
+                <button onclick="resetStats()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
+                    Clear Logs
+                </button>
+                <button onclick="showSpeakerSettings()" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-all active:scale-95" title="Speaker Routing">
+                    🔊
+                </button>
+                <div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
+                <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
+                    <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
+                    Lead Mode
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Stats Overview -->
+        <div id="statsBar" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"></div>
+
+        <!-- Station Grid -->
+        <div id="processGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
     </div>
-</div>
 
-<div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print hidden">
-    <!-- Header -->
-    <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-md shadow-2xl">
-        <div class="text-center md:text-left">
-            <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
-                <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
-                Shop Floor: <span id="displayShopId" class="text-blue-400"></span>
-            </h1>
-            <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
+    <!-- Master Stats Modal -->
+    <div id="masterStatsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
+                <div>
+                    <h2 class="text-2xl font-black uppercase tracking-tight">Shop-Wide Report</h2>
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Consolidated Production Data</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all active:scale-95">Print Full Report</button>
+                    <button onclick="closeMasterStats()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
+                </div>
+            </div>
+            <div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
         </div>
+    </div>
 
-        <div class="flex flex-wrap items-center justify-center md:justify-end gap-2">
-            <!-- Hidden by default, shown in lead mode -->
-            <button onclick="openQuestions()" id="questionsBtn" class="hidden px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-teal-900/20">
-                Questions 📋
-            </button>
-            <button onclick="openManageStations()" id="manageStationsBtn" class="hidden px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-purple-900/20">
-                Manage Stations ⚙️
-            </button>
+    <!-- Speaker Routing Modal -->
+    <div id="speakerModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[450] flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
+                <div>
+                    <h2 class="text-xl font-black uppercase tracking-tight">Speaker Options</h2>
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Route App Sound Output</p>
+                </div>
+                <button onclick="closeSpeakerSettings()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
+            </div>
+            <div class="p-6 space-y-6">
+                <p class="text-sm text-slate-400 leading-relaxed">
+                    To send the alarm sound to your paired Google Home speaker, select it below. The browser requires you to grant output permissions first.
+                </p>
+                <div class="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active Output Device</p>
+                    <p id="activeSpeakerLabel" class="text-sm font-black text-green-400">Default System Speaker</p>
+                </div>
+                <button onclick="routeAudioToSpeaker()" class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>Select Google Home / Output Device</span>
+                </button>
+                <p class="text-[10px] text-slate-500 italic text-center">
+                    Note: Ensure your Google Home is paired with this laptop via Bluetooth or system audio settings first.
+                </p>
+            </div>
+            <div class="p-6 border-t border-white/5 bg-slate-800/10 flex justify-end">
+                <button onclick="closeSpeakerSettings()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold uppercase text-xs">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print View -->
+    <div id="printView" class="print-only p-8">
+        <div class="print-header">
+            <h1 class="text-3xl font-bold uppercase">Shop Floor Production Report</h1>
+            <p id="printDate" class="text-sm font-bold mt-2"></p>
+        </div>
+        <div id="printTableContainer"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-80 transform translate-y-40 transition-transform duration-500 z-[300] no-print">
+        <div id="toastContainer" class="p-5 rounded-2xl shadow-2xl flex items-center justify-between text-white backdrop-blur-lg">
+            <div class="flex items-center gap-4">
+                <div id="toastIcon" class="bg-white/20 p-2 rounded-xl text-xl">⚠️</div>
+                <div>
+                    <p id="toastTitle" class="text-[10px] font-black uppercase opacity-70 tracking-widest"></p>
+                    <p id="toastMsg" class="font-bold text-lg"></p>
+                </div>
+            </div>
+            <button onclick="closeToast()" class="p-2 hover:bg-white/10 rounded-full transition-colors">✕</button>
+        </div>
+    </div>
+
+    <script>
+        const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
+        const INITIAL_STATIONS = [
+            { id: 1, name: 'Installation', status: 'normal', history: {}, timer: null },
+            { id: 2, name: 'Millwork', status: 'normal', history: {}, timer: null },
+            { id: 3, name: 'Systems', status: 'normal', history: {}, timer: null },
+            { id: 4, name: 'Lamination', status: 'normal', history: {}, timer: null },
+            { id: 5, name: 'Upholstery', status: 'normal', history: {}, timer: null },
+            { id: 6, name: 'CNC', status: 'normal', history: {}, timer: null },
+            { id: 7, name: 'Finishing', status: 'normal', history: {}, timer: null },
+            { id: 8, name: 'Assembly', status: 'normal', history: {}, timer: null }
+        ];
+
+        let stations = JSON.parse(localStorage.getItem('andon_stats_v5')) || [...INITIAL_STATIONS];
+        let isLeadMode = false;
+        let ticker = null;
+        
+        // --- Audio Engine ---
+        let audioCtx = null;
+        let masterGain = null;
+        let chosenAudioDeviceId = "";
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.connect(audioCtx.destination);
             
-            <button onclick="showMasterStats()" id="masterStatsBtn" class="hidden px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
-                Master Stats 📊
-            </button>
-            <button onclick="resetStats()" id="clearLogsBtn" class="hidden px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
-                Clear Logs
-            </button>
-            <div class="h-8 w-[1px] bg-slate-800 mx-2 hidden sm:block"></div>
-            <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
-                <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
-                Lead Mode
-            </button>
-            <button onclick="logoutShop()" class="ml-2 px-3 py-2.5 rounded-xl bg-red-900/30 text-red-400 hover:bg-red-800/50 border border-red-900/50 font-bold transition-all active:scale-95 text-xs">
-                Exit
-            </button>
-        </div>
-    </header>
+            // Background Keep-Alive
+            setInterval(() => {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const oscillator = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.0001; 
+                oscillator.connect(gain);
+                gain.connect(audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            }, 5000);
+        }
 
-    <!-- Main Stats Overview -->
-    <div id="statsBar" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"></div>
+        // Programmatically routes the AudioContext to a selected device ID
+        async function setAudioOutput(deviceId, label) {
+            initAudio();
+            if (typeof audioCtx.setSinkId === 'function') {
+                try {
+                    await audioCtx.setSinkId(deviceId);
+                    chosenAudioDeviceId = deviceId;
+                    document.getElementById('activeSpeakerLabel').innerText = label || "Default Speaker";
+                } catch (err) {
+                    console.error("Failed to set audio sink ID:", err);
+                    alert("Could not route directly to this device. Please check system default audio routing.");
+                }
+            } else {
+                alert("Your browser does not support selective audio routing. Please set your Google Home as the laptop's default audio output device in your system settings.");
+            }
+        }
 
-    <!-- Station Grid -->
-    <div id="processGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-</div>
-
-<!-- Master Stats Modal -->
-<div id="masterStatsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
-    <div class="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-            <div>
-                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Shop-Wide Report</h2>
-                <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Consolidated Production Data</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="window.print()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs transition-all active:scale-95">Print Full Report</button>
-                <button onclick="closeMasterStats()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-            </div>
-        </div>
-        <div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
-    </div>
-</div>
-
-<!-- Manage Stations Modal -->
-<div id="manageStationsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
-    <div class="bg-slate-900 border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-            <h2 class="text-2xl font-black uppercase tracking-tight text-white">Manage Stations</h2>
-            <button onclick="closeManageStations()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-        </div>
-        <div class="p-6 overflow-y-auto flex-1 space-y-4" id="manageStationsList">
-            <!-- Dynamically populated -->
-        </div>
-        <div class="p-6 border-t border-white/5 bg-slate-800/30 flex justify-between">
-            <button onclick="addStation()" class="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-black uppercase text-xs transition-all text-white">Add Station +</button>
-            <button onclick="saveStations()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all text-white shadow-lg shadow-blue-900/20">Save Changes</button>
-        </div>
-    </div>
-</div>
-
-<!-- Questions Guide Modal -->
-<div id="questionsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
-    <div class="bg-slate-900 border border-white/10 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-            <div>
-                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Response Guide</h2>
-                <p class="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Lead Incident Checklist</p>
-            </div>
-            <button onclick="closeQuestions()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-        </div>
-        <div class="p-6 overflow-y-auto flex-1 space-y-6">
-            
-            <!-- Section 1 -->
-            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
-                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
-                    <span class="w-7 h-7 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-sm font-black border border-red-500/30">1</span>
-                    Safety and Containment <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">Immediate Response</span>
-                </h3>
-                <ul class="space-y-3 text-sm text-slate-300 font-medium">
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Is everyone safe?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Safety is always the first priority).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What specifically happened to cause the stop?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Defect, machine breakdown, material shortage, or safety issue).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Is the problem contained?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Ensuring defective parts do not move to the next station).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What is the symptom of the issue?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Fixing the symptom to get the line moving). [1, 2]</span></div></li>
-                </ul>
-            </div>
-
-            <!-- Section 2 -->
-            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
-                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
-                    <span class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center text-sm font-black border border-amber-500/30">2</span>
-                    Diagnosis and Root Cause <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">5 Whys Analysis</span>
-                </h3>
-                <ul class="space-y-3 text-sm text-slate-300 font-medium">
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Why did this happen?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Asking "Why" multiple times to find the root cause, not just the symptom).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Was the machine running to standard?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Checking if the operator was following standardized work).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What changed?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Was it new materials, a change in personnel, or a tool change?)</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Did the yellow light happen first?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Checking if the issue was ignored or if it escalated too quickly). [1, 2, 3]</span></div></li>
-                </ul>
-            </div>
-
-            <!-- Section 3 -->
-            <div class="bg-slate-800 p-5 rounded-2xl border border-white/5">
-                <h3 class="text-lg font-black text-white mb-4 flex items-center gap-3">
-                    <span class="w-7 h-7 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-sm font-black border border-green-500/30">3</span>
-                    Immediate Action <span class="text-slate-500 text-sm font-bold uppercase tracking-wider ml-auto hidden sm:block">And Future Prevention</span>
-                </h3>
-                <ul class="space-y-3 text-sm text-slate-300 font-medium">
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"How can we get the line running again safely?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Focusing on a quick, safe restart).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Do we need maintenance or engineering support?"</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"What is our plan to prevent this from happening again?"</span> <span class="text-slate-400 text-xs block mt-0.5">(Updating work standards or fixing equipment to ensure the issue does not recur).</span></div></li>
-                    <li class="flex items-start gap-3"><span class="text-teal-400 mt-1">▹</span> <div><span class="text-white">"Do we need to update our standard operating procedures (SOPs) based on this?"</span> <span class="text-slate-400 text-xs block mt-0.5">[1, 2, 3]</span></div></li>
-                </ul>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<!-- Custom Confirm Modal -->
-<div id="confirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[600] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-white/10 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
-        <h3 class="text-xl font-black text-white mb-4" id="confirmMsg">Are you sure?</h3>
-        <div class="flex gap-4 justify-center mt-8">
-            <button onclick="closeConfirm()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold transition-all text-white">Cancel</button>
-            <button onclick="executeConfirm()" class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 font-bold transition-all text-white shadow-lg shadow-red-900/20">Confirm</button>
-        </div>
-    </div>
-</div>
-
-<!-- Print View -->
-<div id="printView" class="print-only p-8">
-    <div class="print-header">
-        <h1 class="text-3xl font-bold uppercase">Shop Floor Production Report</h1>
-        <p id="printDate" class="text-sm font-bold mt-2"></p>
-    </div>
-    <div id="printTableContainer"></div>
-</div>
-
-<!-- Toast Notification -->
-<div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-80 transform translate-y-40 transition-transform duration-500 z-[300] no-print">
-    <div id="toastContainer" class="p-5 rounded-2xl shadow-2xl flex items-center justify-between bg-slate-800 text-white backdrop-blur-lg border border-white/10">
-        <div class="flex items-center gap-4">
-            <div id="toastIcon" class="bg-white/20 p-2 rounded-xl text-xl">⚠️</div>
-            <div>
-                <p id="toastTitle" class="text-[10px] font-black uppercase opacity-70 tracking-widest"></p>
-                <p id="toastMsg" class="font-bold text-lg"></p>
-            </div>
-        </div>
-        <button onclick="closeToast()" class="p-2 hover:bg-white/10 rounded-full transition-colors">✕</button>
-    </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Your Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyD23yd-MlA4lMc1l95hgUulYE-4hIehRDg",
-  authDomain: "andon-f8690.firebaseapp.com",
-  databaseURL: "https://andon-f8690-default-rtdb.firebaseio.com",
-  projectId: "andon-f8690",
-  storageBucket: "andon-f8690.firebasestorage.app",
-  messagingSenderId: "83350352802",
-  appId: "1:83350352802:web:f3928af76cd3ebc62138fb",
-  measurementId: "G-E3FJFMD04V"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
-const INITIAL_STATIONS = [
-    { id: 1, name: 'Installation', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 2, name: 'Millwork', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 3, name: 'Systems', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 4, name: 'Lamination', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 5, name: 'Upholstery', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 6, name: 'CNC', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 7, name: 'Finishing', status: 'normal', history: {}, warningAt: null, stoppedAt: null },
-    { id: 8, name: 'Assembly', status: 'normal', history: {}, warningAt: null, stoppedAt: null }
-];
-
-let stations = [...INITIAL_STATIONS];
-let isLeadMode = false;
-let ticker = null;
-let currentShopId = localStorage.getItem('andon_shop_id') || "";
-let shopDocRef = null;
-let unsubscribeFirestore = null;
-
-// --- Custom Confirm Modal Logic ---
-let confirmCallback = null;
-window.customConfirm = (msg, callback) => {
-    document.getElementById('confirmMsg').innerText = msg;
-    document.getElementById('confirmModal').classList.remove('hidden');
-    confirmCallback = callback;
-};
-
-window.closeConfirm = () => {
-    document.getElementById('confirmModal').classList.add('hidden');
-    confirmCallback = null;
-};
-
-window.executeConfirm = () => {
-    if (confirmCallback) confirmCallback();
-    closeConfirm();
-};
-
-// --- Login & Firebase Flow ---
-if (currentShopId) {
-    document.getElementById('shopIdInput').value = currentShopId;
-}
-
-window.joinShop = async () => {
-    const shopId = document.getElementById('shopIdInput').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    if (!shopId) {
-        document.getElementById('loginError').innerText = "Please enter a valid Shop ID";
-        document.getElementById('loginError').classList.remove('hidden');
-        return;
-    }
-    
-    const btn = document.getElementById('joinBtn');
-    btn.innerText = "Connecting...";
-    btn.disabled = true;
-
-    try {
-        await signInAnonymously(auth);
-        
-        currentShopId = shopId;
-        localStorage.setItem('andon_shop_id', shopId);
-        document.getElementById('displayShopId').innerText = shopId.toUpperCase();
-        
-        shopDocRef = doc(db, 'shops', shopId);
-        
-        unsubscribeFirestore = onSnapshot(shopDocRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const incomingStations = snapshot.data().stations;
-                
-                // Check for remote status changes to trigger Lead Mode audio/toasts
-                incomingStations.forEach(incoming => {
-                    const current = stations.find(s => s.id === incoming.id);
-                    if (current && current.status !== incoming.status) {
-                        if (incoming.status === 'warning') {
-                            if (isLeadMode) playHelpSound();
-                        } else if (incoming.status === 'critical') {
-                            if (isLeadMode) playEmergencySound();
-                        }
+        window.routeAudioToSpeaker = async () => {
+            initAudio();
+            // Prompt the browser's native audio selection tool
+            if (navigator.mediaDevices && navigator.mediaDevices.selectAudioOutput) {
+                try {
+                    const audioDevice = await navigator.mediaDevices.selectAudioOutput();
+                    await setAudioOutput(audioDevice.deviceId, audioDevice.label);
+                } catch (err) {
+                    console.error("Device selection cancelled or failed:", err);
+                }
+            } else {
+                // Fallback: Enumerate devices manually if permission already granted
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const outputs = devices.filter(device => device.kind === 'audiooutput');
+                    if (outputs.length > 0) {
+                        // For secure context/iframe compatibility, request mic permission to unmask labels
+                        await navigator.mediaDevices.getUserMedia({ audio: true });
+                        const updatedDevices = await navigator.mediaDevices.enumerateDevices();
+                        const updatedOutputs = updatedDevices.filter(d => d.kind === 'audiooutput');
                         
-                        if (isLeadMode && incoming.status !== 'normal' && current.status === 'normal') {
-                            triggerToast(incoming);
+                        // Pick first non-default output as a default demonstration
+                        const target = updatedOutputs.find(d => d.deviceId !== 'default') || updatedOutputs[0];
+                        await setAudioOutput(target.deviceId, target.label);
+                    } else {
+                        alert("No audio output devices found. Please connect your Google Home via Bluetooth to your laptop.");
+                    }
+                } catch (err) {
+                    alert("To select speaker routes, please configure your Google Home as the system default audio device on your computer settings.");
+                }
+            }
+        };
+
+        function playHelpSound() {
+            if (!isLeadMode || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.3, now + 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+            osc.connect(g); g.connect(masterGain);
+            osc.start(now); osc.stop(now + 0.8);
+        }
+
+        function playEmergencySound() {
+            if (!isLeadMode || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            // Triple intense burst
+            [0, 0.2, 0.4].forEach(offset => {
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(1200, now + offset);
+                osc.frequency.exponentialRampToValueAtTime(600, now + offset + 0.15);
+                g.gain.setValueAtTime(0, now + offset);
+                g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
+                osc.connect(g); g.connect(masterGain);
+                osc.start(now + offset); osc.stop(now + offset + 0.15);
+            });
+        }
+
+        // --- Core Logic ---
+
+        function save() {
+            localStorage.setItem('andon_stats_v5', JSON.stringify(stations));
+        }
+
+        function getToday() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function startTicker() {
+            if (ticker) return;
+            ticker = setInterval(() => {
+                let changed = false;
+                stations.forEach(s => {
+                    if (s.status === 'warning' && s.timer > 0) {
+                        s.timer--;
+                        changed = true;
+                        if (s.timer === 0) {
+                            updateStatus(s.id, 'critical', true);
                         }
                     }
                 });
+                if (changed) render();
+            }, 1000);
+        }
 
-                stations = incomingStations;
-                render();
+        window.updateStatus = (id, newStatus, isEscalation = false) => {
+            const station = stations.find(s => s.id === id);
+            if (!station || (station.status === newStatus && !isEscalation)) return;
+
+            const oldStatus = station.status;
+            const today = getToday();
+            
+            if (!station.history[today]) {
+                station.history[today] = { help: 0, stop: 0 };
+            }
+
+            station.status = newStatus;
+
+            if (newStatus === 'warning') {
+                station.timer = HELP_TIMEOUT_SECONDS;
+                station.history[today].help++;
+                if (isLeadMode) playHelpSound();
             } else {
-                setDoc(shopDocRef, { stations: INITIAL_STATIONS });
-                stations = [...INITIAL_STATIONS];
+                station.timer = null;
+            }
+
+            if (newStatus === 'critical') {
+                station.history[today].stop++;
+                if (isLeadMode) playEmergencySound();
+            }
+
+            if (isLeadMode && newStatus !== 'normal' && oldStatus === 'normal') {
+                triggerToast(station);
+            }
+
+            save();
+            render();
+        };
+
+        function formatTime(seconds) {
+            if (seconds === null || seconds === undefined) return "";
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        window.showMasterStats = () => {
+            const content = document.getElementById('masterStatsContent');
+            const printContainer = document.getElementById('printTableContainer');
+            document.getElementById('printDate').innerText = `Generated: ${new Date().toLocaleString()}`;
+            content.innerHTML = '';
+            printContainer.innerHTML = '';
+
+            const allDates = new Set();
+            stations.forEach(s => Object.keys(s.history).forEach(d => allDates.add(d)));
+            const sortedDates = Array.from(allDates).sort().reverse();
+
+            if (sortedDates.length === 0) {
+                content.innerHTML = '<p class="text-center py-20 text-slate-500 font-bold uppercase">No data recorded</p>';
+                return;
+            }
+
+            sortedDates.forEach(date => {
+                const dateLabel = new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const tableHtml = `
+                    <table class="w-full text-left mt-4 mb-10">
+                        <thead><tr class="text-[10px] text-slate-500 font-black uppercase"><th class="pb-4">Sector</th><th class="pb-4">Help Requests</th><th class="pb-4">Stoppages</th></tr></thead>
+                        <tbody class="divide-y divide-white/5">
+                            ${stations.map(s => {
+                                const data = s.history[date] || { help: 0, stop: 0 };
+                                return `<tr><td class="py-3 font-bold text-white">${s.name}</td><td class="py-3 font-black text-amber-500">${data.help}</td><td class="py-3 font-black text-red-500">${data.stop}</td></tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>`;
+                content.innerHTML += `<div class="sticky top-0 bg-slate-900 py-2 border-b border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest z-10">${dateLabel}</div>${tableHtml}`;
+                printContainer.innerHTML += `<h2 class="text-lg font-bold mb-2 mt-8 border-b border-gray-300 pb-1">${dateLabel}</h2><table class="print-table"><thead><tr><th>Station</th><th>Help Calls</th><th>Stoppages</th></tr></thead><tbody>${stations.map(s => {const data = s.history[date] || { help: 0, stop: 0 }; return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td></tr>`;}).join('')}</tbody></table>`;
+            });
+            document.getElementById('masterStatsModal').classList.remove('hidden');
+        };
+
+        window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
+
+        window.showSpeakerSettings = () => {
+            initAudio();
+            document.getElementById('speakerModal').classList.remove('hidden');
+        }
+        window.closeSpeakerSettings = () => document.getElementById('speakerModal').classList.add('hidden');
+
+        window.toggleLeadMode = () => {
+            initAudio();
+            isLeadMode = !isLeadMode;
+            const btn = document.getElementById('leadBtn');
+            const dot = document.getElementById('leadStatusDot');
+            if (isLeadMode) {
+                btn.classList.replace('bg-slate-800', 'bg-blue-600');
+                btn.classList.replace('border-slate-700', 'border-blue-400');
+                dot.classList.replace('bg-slate-500', 'bg-white');
+            } else {
+                btn.classList.replace('bg-blue-600', 'bg-slate-800');
+                btn.classList.replace('border-blue-400', 'border-slate-700');
+                dot.classList.replace('bg-white', 'bg-slate-500');
+            }
+        };
+
+        window.resetStats = () => {
+            if(confirm("Clear all logs?")) {
+                stations = INITIAL_STATIONS.map(s => ({ ...s, history: {} }));
+                save();
                 render();
             }
-            
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
-            
-            startTicker();
-        }, (error) => {
-            console.error("Firestore error:", error);
-            alert("Connection to live server lost.");
-        });
-        
-    } catch (error) {
-        console.error("Auth error:", error);
-        document.getElementById('loginError').innerText = "Connection failed. Please try again.";
-        document.getElementById('loginError').classList.remove('hidden');
-        btn.innerText = "Connect Live";
-        btn.disabled = false;
-    }
-}
+        };
 
-document.getElementById('shopIdInput').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        window.joinShop();
-    }
-});
-
-window.logoutShop = () => {
-    if (unsubscribeFirestore) unsubscribeFirestore();
-    if (ticker) { clearInterval(ticker); ticker = null; }
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('joinBtn').innerText = "Connect Live";
-    document.getElementById('joinBtn').disabled = false;
-};
-
-// --- Audio Engine ---
-let audioCtx = null;
-let masterGain = null;
-
-function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = audioCtx.createGain();
-    masterGain.connect(audioCtx.destination);
-
-    setInterval(() => {
-        if (audioCtx?.state === 'suspended') audioCtx.resume();
-        const oscillator = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.0001;
-        oscillator.connect(gain);
-        gain.connect(audioCtx.destination);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    }, 5000);
-}
-
-function playHelpSound() {
-    if (!isLeadMode || !audioCtx) return;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.3, now + 0.1);
-    g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-    osc.connect(g); g.connect(masterGain);
-    osc.start(now); osc.stop(now + 0.8);
-}
-
-function playEmergencySound() {
-    if (!isLeadMode || !audioCtx) return;
-    const now = audioCtx.currentTime;
-
-    [0, 0.2, 0.4].forEach(offset => {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(1200, now + offset);
-        osc.frequency.exponentialRampToValueAtTime(600, now + offset + 0.15);
-        g.gain.setValueAtTime(0, now + offset);
-        g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
-        osc.connect(g); g.connect(masterGain);
-        osc.start(now + offset); osc.stop(now + offset + 0.15);
-    });
-}
-
-// --- Core Logic ---
-
-async function save() {
-    if (!shopDocRef) return;
-    try {
-        await updateDoc(shopDocRef, { stations: stations });
-    } catch (error) {
-        console.error("Error saving data to cloud:", error);
-    }
-}
-
-function getToday() {
-    return new Date().toISOString().split('T')[0];
-}
-
-function startTicker() {
-    if (ticker) return;
-    ticker = setInterval(() => {
-        let changed = false;
-        const now = Date.now();
-        
-        stations.forEach(s => {
-            if (s.status === 'warning' && s.warningAt) {
-                const elapsed = Math.floor((now - s.warningAt) / 1000);
-                const remaining = Math.max(0, HELP_TIMEOUT_SECONDS - elapsed);
-                if (remaining === 0) {
-                    updateStatus(s.id, 'critical', true);
-                } else {
-                    changed = true; // Redraw the UI countdown timer
-                }
-            } else if (s.status === 'critical') {
-                changed = true; // Redraw the UI downtime duration timer
-            }
-        });
-        
-        if (changed) render();
-    }, 1000);
-}
-
-window.updateStatus = (id, newStatus, isEscalation = false) => {
-    const station = stations.find(s => s.id === id);
-    if (!station || (station.status === newStatus && !isEscalation)) return;
-
-    const oldStatus = station.status;
-    const today = getToday();
-
-    if (!station.history[today]) {
-        station.history[today] = { help: 0, stop: 0, downtime: 0 };
-    }
-
-    // Capture downtime when resolving a STOP
-    if (oldStatus === 'critical' && newStatus !== 'critical') {
-        if (station.stoppedAt) {
-            const durationSeconds = Math.floor((Date.now() - station.stoppedAt) / 1000);
-            station.history[today].downtime = (station.history[today].downtime || 0) + durationSeconds;
-            station.stoppedAt = null;
+        function triggerToast(station) {
+            const toast = document.getElementById('alertToast');
+            document.getElementById('toastTitle').innerText = station.status === 'critical' ? "Production Stopped" : "Assistance Needed";
+            document.getElementById('toastMsg').innerText = station.name;
+            toast.classList.remove('translate-y-40');
+            setTimeout(() => toast.classList.add('translate-y-40'), 5000);
         }
-    }
 
-    station.status = newStatus;
+        window.closeToast = () => document.getElementById('alertToast').classList.add('translate-y-40');
 
-    if (newStatus === 'warning') {
-        station.warningAt = Date.now();
-        station.history[today].help++;
-        if (isLeadMode) playHelpSound();
-    } else {
-        station.warningAt = null;
-    }
+        function render() {
+            const today = getToday();
+            let totalHelp = 0, totalStop = 0;
+            stations.forEach(s => { if(s.history[today]) { totalHelp += s.history[today].help; totalStop += s.history[today].stop; } });
+            const activeIssues = stations.filter(s => s.status !== 'normal').length;
+            const health = Math.round(((stations.length - activeIssues) / stations.length) * 100);
 
-    if (newStatus === 'critical') {
-        if (!station.stoppedAt) station.stoppedAt = Date.now();
-        station.history[today].stop++;
-        if (isLeadMode) playEmergencySound();
-    }
+            document.getElementById('statsBar').innerHTML = `
+                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Health</p><p class="text-2xl font-black ${health > 70 ? 'text-green-500' : 'text-amber-500'}">${health}%</p></div>
+                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Help</p><p class="text-2xl font-black text-amber-500">${totalHelp}</p></div>
+                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Stops</p><p class="text-2xl font-black text-red-500">${totalStop}</p></div>
+                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Active Alerts</p><p class="text-2xl font-black text-white">${activeIssues}</p></div>`;
 
-    if (isLeadMode && newStatus !== 'normal' && oldStatus === 'normal') {
-        triggerToast(station);
-    }
-
-    render();
-    save(); // Push to Firestore
-};
-
-function formatTime(seconds) {
-    if (seconds === null || seconds === undefined) return "&nbsp;";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-window.showMasterStats = () => {
-    const content = document.getElementById('masterStatsContent');
-    const printContainer = document.getElementById('printTableContainer');
-    document.getElementById('printDate').innerText = `Generated: ${new Date().toLocaleString()} (Shop: ${currentShopId})`;
-    content.innerHTML = '';
-    printContainer.innerHTML = '';
-
-    const allDates = new Set();
-    stations.forEach(s => Object.keys(s.history).forEach(d => allDates.add(d)));
-    const sortedDates = Array.from(allDates).sort().reverse();
-
-    if (sortedDates.length === 0) {
-        content.innerHTML = '<p class="text-center py-20 text-slate-500 font-bold uppercase">No data recorded</p>';
-        return;
-    }
-
-    sortedDates.forEach(date => {
-        const dateLabel = new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        
-        const tableHtml = `<table class="w-full text-left mt-4 mb-10">
-            <thead>
-                <tr class="text-[10px] text-slate-500 font-black uppercase">
-                    <th class="pb-4">Sector</th>
-                    <th class="pb-4">Help Requests</th>
-                    <th class="pb-4">Stoppages</th>
-                    <th class="pb-4">Total Downtime</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-                ${stations.map(s => {
-                    const data = s.history[date] || { help: 0, stop: 0, downtime: 0 };
-                    const downMins = Math.ceil((data.downtime || 0) / 60);
-                    const displayDown = downMins > 0 ? `${downMins} min` : '-';
-                    return `<tr>
-                        <td class="py-3 font-bold text-white">${s.name}</td>
-                        <td class="py-3 font-black text-amber-500">${data.help}</td>
-                        <td class="py-3 font-black text-red-500">${data.stop}</td>
-                        <td class="py-3 font-black text-slate-400">${displayDown}</td>
-                    </tr>`; 
-                }).join('')}
-            </tbody>
-        </table>`;
-        content.innerHTML += `<div class="sticky top-0 bg-slate-900 py-2 border-b border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest z-10">${dateLabel}</div>${tableHtml}`;
-
-        printContainer.innerHTML += `<h2>${dateLabel}</h2>
-        <table class="print-table">
-            <thead>
-                <tr><th>Station</th><th>Help Calls</th><th>Stoppages</th><th>Downtime</th></tr>
-            </thead>
-            <tbody>
-                ${stations.map(s => {
-                    const data = s.history[date] || { help: 0, stop: 0, downtime: 0 }; 
-                    const downMins = Math.ceil((data.downtime || 0) / 60);
-                    return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td><td>${downMins} min</td></tr>`;
-                }).join('')}
-            </tbody>
-        </table>`;
-    });
-    document.getElementById('masterStatsModal').classList.remove('hidden');
-};
-
-window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
-
-// --- Dynamic Station Management ---
-window.openManageStations = () => {
-    const list = document.getElementById('manageStationsList');
-    list.innerHTML = '';
-    stations.forEach(s => {
-        list.innerHTML += `
-            <div class="flex items-center gap-4 bg-slate-800 p-4 rounded-xl" id="edit-station-${s.id}">
-                <input type="text" id="station-name-input-${s.id}" value="${s.name}" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white font-bold focus:border-blue-500 outline-none transition-colors">
-                <button onclick="removeStation(${s.id})" class="px-5 py-3 bg-red-900/30 border border-red-900/50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg font-black transition-all active:scale-95 text-xs uppercase">Delete</button>
-            </div>
-        `;
-    });
-    document.getElementById('manageStationsModal').classList.remove('hidden');
-};
-
-window.closeManageStations = () => {
-    document.getElementById('manageStationsModal').classList.add('hidden');
-};
-
-// --- Questions Guide Modal ---
-window.openQuestions = () => {
-    document.getElementById('questionsModal').classList.remove('hidden');
-};
-
-window.closeQuestions = () => {
-    document.getElementById('questionsModal').classList.add('hidden');
-};
-
-window.addStation = () => {
-    const newId = Date.now();
-    stations.push({ 
-        id: newId, 
-        name: 'New Station', 
-        status: 'normal', 
-        history: {},
-        warningAt: null,
-        stoppedAt: null
-    });
-    openManageStations(); 
-};
-
-window.removeStation = (id) => {
-    customConfirm("Delete this station permanently?", () => {
-        stations = stations.filter(s => s.id !== id);
-        openManageStations();
-    });
-};
-
-window.saveStations = () => {
-    stations.forEach(s => {
-        const input = document.getElementById(`station-name-input-${s.id}`);
-        if (input) {
-            s.name = input.value.trim() || 'Unnamed Station';
-        }
-    });
-    save(); // Push configuration changes to all connected displays
-    render();
-    closeManageStations();
-};
-
-window.toggleLeadMode = () => {
-    initAudio();
-    isLeadMode = !isLeadMode;
-    const btn = document.getElementById('leadBtn');
-    const dot = document.getElementById('leadStatusDot');
-    const manageBtn = document.getElementById('manageStationsBtn');
-    const questionsBtn = document.getElementById('questionsBtn');
-    const masterStatsBtn = document.getElementById('masterStatsBtn');
-    const clearLogsBtn = document.getElementById('clearLogsBtn');
-    
-    if (isLeadMode) {
-        btn.classList.replace('bg-slate-800', 'bg-blue-600');
-        btn.classList.replace('border-slate-700', 'border-blue-400');
-        dot.classList.replace('bg-slate-500', 'bg-white');
-        manageBtn.classList.remove('hidden'); // Reveal Manage Stations button
-        questionsBtn.classList.remove('hidden'); // Reveal Questions button
-        masterStatsBtn.classList.remove('hidden'); // Reveal Master Stats button
-        clearLogsBtn.classList.remove('hidden'); // Reveal Clear Logs button
-    } else {
-        btn.classList.replace('bg-blue-600', 'bg-slate-800');
-        btn.classList.replace('border-blue-400', 'border-slate-700');
-        dot.classList.replace('bg-white', 'bg-slate-500');
-        manageBtn.classList.add('hidden'); // Hide Manage Stations button
-        questionsBtn.classList.add('hidden'); // Hide Questions button
-        masterStatsBtn.classList.add('hidden'); // Hide Master Stats button
-        clearLogsBtn.classList.add('hidden'); // Hide Clear Logs button
-    }
-};
-
-window.resetStats = () => {
-    customConfirm("Clear all logs for ALL users connected to this Shop ID?", () => {
-        stations.forEach(s => {
-            s.history = {};
-            if (s.status !== 'normal') {
-                s.status = 'normal';
-                s.warningAt = null;
-                s.stoppedAt = null;
-            }
-        });
-        save();
-        render();
-    });
-};
-
-function triggerToast(station) {
-    const toast = document.getElementById('alertToast');
-    document.getElementById('toastTitle').innerText = station.status === 'critical' ? "Production Stopped" : "Assistance Needed";
-    document.getElementById('toastMsg').innerText = station.name;
-    toast.classList.remove('translate-y-40');
-    setTimeout(() => toast.classList.add('translate-y-40'), 5000);
-}
-
-window.closeToast = () => document.getElementById('alertToast').classList.add('translate-y-40');
-
-function render() {
-    const today = getToday();
-    let totalHelp = 0, totalStop = 0, totalDownSeconds = 0;
-    
-    stations.forEach(s => { 
-        if(s.history[today]) { 
-            totalHelp += s.history[today].help; 
-            totalStop += s.history[today].stop; 
-            totalDownSeconds += (s.history[today].downtime || 0);
-        } 
-    });
-    
-    const activeIssues = stations.filter(s => s.status !== 'normal').length;
-    const health = stations.length > 0 ? Math.round(((stations.length - activeIssues) / stations.length) * 100) : 100;
-    const totalDownDisplay = totalDownSeconds > 0 ? Math.ceil(totalDownSeconds / 60) + ' min' : '0 min';
-
-    document.getElementById('statsBar').innerHTML = `
-        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
-            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Health</p>
-            <p class="text-2xl font-black ${health > 70 ? 'text-green-500' : 'text-amber-500'}">${health}%</p>
-        </div>
-        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
-            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Help</p>
-            <p class="text-2xl font-black text-amber-500">${totalHelp}</p>
-        </div>
-        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
-            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Stops</p>
-            <p class="text-2xl font-black text-red-500">${totalStop}</p>
-        </div>
-        <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center">
-            <p class="text-[8px] font-black text-slate-500 uppercase mb-1">Total Downtime</p>
-            <p class="text-2xl font-black text-slate-300">${totalDownDisplay}</p>
-        </div>`;
-
-    const grid = document.getElementById('processGrid');
-    grid.innerHTML = '';
-    
-    stations.forEach(s => {
-        const dayData = s.history[today] || { help: 0, stop: 0, downtime: 0 };
-        const totalDownMins = Math.ceil((dayData.downtime || 0) / 60);
-        
-        let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
-        
-        let displayTimer = "&nbsp;";
-        let timerColor = "text-slate-500";
-        let timerLabel = "&nbsp;";
-
-        if (s.status === 'warning') {
-            const elapsed = s.warningAt ? Math.floor((Date.now() - s.warningAt) / 1000) : 0;
-            const remaining = Math.max(0, HELP_TIMEOUT_SECONDS - elapsed);
-            displayTimer = formatTime(remaining);
-            timerColor = remaining < 60 ? 'text-red-500' : 'text-amber-400';
-            timerLabel = 'Escalation Timer';
-        } else if (s.status === 'critical') {
-            const currentDown = s.stoppedAt ? Math.floor((Date.now() - s.stoppedAt) / 1000) : 0;
-            displayTimer = formatTime(currentDown);
-            timerColor = 'text-red-500';
-            timerLabel = 'Active Downtime';
-        }
-        
-        const card = document.createElement('div');
-        card.className = `station-card border-2 p-5 rounded-3xl ${bg}`; 
-        
-        card.innerHTML = `
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h3 class="font-black text-sm uppercase text-white mb-2">${s.name}</h3>
-                    <div class="flex gap-2">
-                        <span class="text-[10px] font-black text-amber-500" title="Help Calls Today">${dayData.help}H</span>
-                        <span class="text-[10px] font-black text-red-500" title="Stoppages Today">${dayData.stop}S</span>
-                        ${totalDownMins > 0 ? `<span class="text-[10px] font-black text-slate-400" title="Total Downtime Mins">${totalDownMins}m Down</span>` : ''}
+            const grid = document.getElementById('processGrid');
+            grid.innerHTML = '';
+            stations.forEach(s => {
+                const dayData = s.history[today] || { help: 0, stop: 0 };
+                let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
+                const card = document.createElement('div');
+                card.className = `station-card border-2 p-5 rounded-3xl ${bg}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div><h3 class="font-black text-sm uppercase text-white mb-1">${s.name}</h3><div class="flex gap-2"><span class="text-[10px] font-black text-amber-500">${dayData.help}H</span><span class="text-[10px] font-black text-red-500">${dayData.stop}S</span></div></div>
+                        <div class="text-right"><div class="text-[14px] font-black ${s.timer < 60 ? 'text-red-500' : 'text-white'}">${formatTime(s.timer)}</div><div class="text-[8px] font-black text-slate-500 uppercase tracking-tighter">${s.status === 'warning' ? 'Escalation Timer' : ''}</div></div>
                     </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-2xl font-black ${timerColor}">${displayTimer}</div>
-                    <div class="text-[8px] font-black uppercase text-slate-500">${timerLabel}</div>
-                </div>
-            </div>
-            <div class="grid grid-cols-3 gap-2 mt-6">
-                <button onclick="updateStatus(${s.id}, 'normal')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'normal' ? 'bg-green-600 border border-green-400 text-white' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">OK</button>
-                <button onclick="updateStatus(${s.id}, 'warning')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'warning' ? 'bg-amber-500 border border-amber-300 text-black' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">HELP</button>
-                <button onclick="updateStatus(${s.id}, 'critical')" class="py-2 rounded-xl text-[10px] font-black uppercase ${s.status === 'critical' ? 'bg-white border border-white text-red-600' : 'bg-slate-800 border border-slate-700 text-slate-500 hover:bg-slate-700'}">STOP</button>
-            </div>`;
-            
-        grid.appendChild(card);
-    });
-}
-</script>
+                    <div class="grid grid-cols-3 gap-2 mt-6">
+                        <button onclick="updateStatus(${s.id}, 'normal')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'normal' ? 'bg-green-600 border-green-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}">OK</button>
+                        <button onclick="updateStatus(${s.id}, 'warning')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'warning' ? 'bg-amber-500 border-amber-300 text-black' : 'bg-slate-800 border-slate-700 text-slate-500'}">HELP</button>
+                        <button onclick="updateStatus(${s.id}, 'critical')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'critical' ? 'bg-white border-white text-red-600' : 'bg-slate-800 border-slate-700 text-slate-500'}">STOP</button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+        
+        startTicker();
+        render();
+    </script>
 </body>
 </html>
+
+```
