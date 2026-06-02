@@ -1,443 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Digital Andon System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
-        .emergency-blink { animation: pulse-red 1s infinite; }
-        button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        .station-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; color: black !important; }
-            body { background: white !important; color: black !important; }
-            .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            .print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 12px; }
-            .print-header { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-        }
-        .print-only { display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Digital Andon System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
+.emergency-blink { animation: pulse-red 1s infinite; }
+button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.debug-log { font-family: monospace; font-size: 10px; color: #10b981; }
+</style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans overflow-x-hidden">
 
-    <div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-md shadow-2xl">
-            <div class="text-center md:text-left">
-                <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
-                    <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
-                    Shop Floor Monitor
-                </h1>
-                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
-            </div>
+<!-- Step 1: Room Selection -->
+<div id="setupOverlay" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
+<div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl">
+<div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+</div>
+<h2 class="text-2xl font-black text-center mb-2">Shop Connect</h2>
+<p class="text-slate-500 text-sm text-center mb-6">Enter Shop ID to sync all boards.</p>
 
-            <div class="flex items-center gap-2">
-                <button onclick="showMasterStats()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
-                    Master Stats 📊
-                </button>
-                <button onclick="resetStats()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
-                    Clear Logs
-                </button>
-                <button onclick="showSpeakerSettings()" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-all active:scale-95" title="Speaker Routing">
-                    🔊
-                </button>
-                <div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
-                <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
-                    <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
-                    Lead Mode
-                </button>
-            </div>
-        </header>
+<input type="text" id="roomInput" placeholder="e.g. SHOP-A" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-center text-xl font-bold uppercase tracking-widest text-white outline-none focus:ring-2 focus:ring-blue-500">
 
-        <!-- Main Stats Overview -->
-        <div id="statsBar" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"></div>
+<button id="connectBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-lg transition-all active:scale-95 shadow-lg">
+CONNECT TO SHOP
+</button>
 
-        <!-- Station Grid -->
-        <div id="processGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-    </div>
+<div id="debugOutput" class="mt-4 p-3 bg-black rounded-lg hidden">
+<p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Status Log:</p>
+<div id="logContent" class="debug-log"></div>
+</div>
+</div>
+</div>
 
-    <!-- Master Stats Modal -->
-    <div id="masterStatsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
-        <div class="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-                <div>
-                    <h2 class="text-2xl font-black uppercase tracking-tight">Shop-Wide Report</h2>
-                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Consolidated Production Data</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="window.print()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all active:scale-95">Print Full Report</button>
-                    <button onclick="closeMasterStats()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-                </div>
-            </div>
-            <div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
-        </div>
-    </div>
+<!-- Step 2: Main App -->
+<div id="mainApp" class="hidden max-w-6xl mx-auto p-4 pb-20">
+<header class="flex justify-between items-center bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-6">
+<div>
+<h1 id="headerTitle" class="font-black text-xl text-white">---</h1>
+<div class="flex items-center gap-2">
+<div id="syncDot" class="w-2 h-2 bg-red-500 rounded-full"></div>
+<span id="syncText" class="text-[10px] font-bold uppercase text-slate-500">Connecting...</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button onclick="toggleLead()" id="leadBtn" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold uppercase">Lead: OFF</button>
+<button onclick="location.reload()" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold uppercase">Reset</button>
+</div>
+</header>
 
-    <!-- Speaker Routing Modal -->
-    <div id="speakerModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[450] flex items-center justify-center p-4 no-print">
-        <div class="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-                <div>
-                    <h2 class="text-xl font-black uppercase tracking-tight">Speaker Options</h2>
-                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Route App Sound Output</p>
-                </div>
-                <button onclick="closeSpeakerSettings()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-            </div>
-            <div class="p-6 space-y-6">
-                <p class="text-sm text-slate-400 leading-relaxed">
-                    To send the alarm sound to your paired Google Home speaker, select it below. The browser requires you to grant output permissions first.
-                </p>
-                <div class="bg-slate-950 p-4 rounded-2xl border border-white/5">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active Output Device</p>
-                    <p id="activeSpeakerLabel" class="text-sm font-black text-green-400">Default System Speaker</p>
-                </div>
-                <button onclick="routeAudioToSpeaker()" class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <span>Select Google Home / Output Device</span>
-                </button>
-                <p class="text-[10px] text-slate-500 italic text-center">
-                    Note: Ensure your Google Home is paired with this laptop via Bluetooth or system audio settings first.
-                </p>
-            </div>
-            <div class="p-6 border-t border-white/5 bg-slate-800/10 flex justify-end">
-                <button onclick="closeSpeakerSettings()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold uppercase text-xs">Done</button>
-            </div>
-        </div>
-    </div>
+<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Stations injected here -->
+</div>
+</div>
 
-    <!-- Print View -->
-    <div id="printView" class="print-only p-8">
-        <div class="print-header">
-            <h1 class="text-3xl font-bold uppercase">Shop Floor Production Report</h1>
-            <p id="printDate" class="text-sm font-bold mt-2"></p>
-        </div>
-        <div id="printTableContainer"></div>
-    </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getFirestore, doc, collection, onSnapshot, updateDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-    <!-- Toast Notification -->
-    <div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-80 transform translate-y-40 transition-transform duration-500 z-[300] no-print">
-        <div id="toastContainer" class="p-5 rounded-2xl shadow-2xl flex items-center justify-between text-white backdrop-blur-lg">
-            <div class="flex items-center gap-4">
-                <div id="toastIcon" class="bg-white/20 p-2 rounded-xl text-xl">⚠️</div>
-                <div>
-                    <p id="toastTitle" class="text-[10px] font-black uppercase opacity-70 tracking-widest"></p>
-                    <p id="toastMsg" class="font-bold text-lg"></p>
-                </div>
-            </div>
-            <button onclick="closeToast()" class="p-2 hover:bg-white/10 rounded-full transition-colors">✕</button>
-        </div>
-    </div>
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-    <script>
-        const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
-        const INITIAL_STATIONS = [
-            { id: 1, name: 'Installation', status: 'normal', history: {}, timer: null },
-            { id: 2, name: 'Millwork', status: 'normal', history: {}, timer: null },
-            { id: 3, name: 'Systems', status: 'normal', history: {}, timer: null },
-            { id: 4, name: 'Lamination', status: 'normal', history: {}, timer: null },
-            { id: 5, name: 'Upholstery', status: 'normal', history: {}, timer: null },
-            { id: 6, name: 'CNC', status: 'normal', history: {}, timer: null },
-            { id: 7, name: 'Finishing', status: 'normal', history: {}, timer: null },
-            { id: 8, name: 'Assembly', status: 'normal', history: {}, timer: null }
-        ];
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+apiKey: "AIzaSyD23yd-MlA4lMc1l95hgUulYE-4hIehRDg",
+authDomain: "andon-f8690.firebaseapp.com",
+databaseURL: "https://andon-f8690-default-rtdb.firebaseio.com",
+projectId: "andon-f8690",
+storageBucket: "andon-f8690.firebasestorage.app",
+messagingSenderId: "83350352802",
+appId: "1:83350352802:web:f3928af76cd3ebc62138fb",
+measurementId: "G-E3FJFMD04V"
+};
 
-        let stations = JSON.parse(localStorage.getItem('andon_stats_v5')) || [...INITIAL_STATIONS];
-        let isLeadMode = false;
-        let ticker = null;
-        
-        // --- Audio Engine ---
-        let audioCtx = null;
-        let masterGain = null;
-        let chosenAudioDeviceId = "";
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
-        function initAudio() {
-            if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            masterGain = audioCtx.createGain();
-            masterGain.connect(audioCtx.destination);
-            
-            // Background Keep-Alive
-            setInterval(() => {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const oscillator = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.0001; 
-                oscillator.connect(gain);
-                gain.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.1);
-            }, 5000);
-        }
+const STATIONS = ['Installation', 'Millwork', 'Systems', 'Lamination', 'Upholstery', 'CNC', 'Finishing', 'Assembly'];
+let db, auth, activeRoom, isLead = false;
+let processes = [];
 
-        // Programmatically routes the AudioContext to a selected device ID
-        async function setAudioOutput(deviceId, label) {
-            initAudio();
-            if (typeof audioCtx.setSinkId === 'function') {
-                try {
-                    await audioCtx.setSinkId(deviceId);
-                    chosenAudioDeviceId = deviceId;
-                    document.getElementById('activeSpeakerLabel').innerText = label || "Default Speaker";
-                } catch (err) {
-                    console.error("Failed to set audio sink ID:", err);
-                    alert("Could not route directly to this device. Please check system default audio routing.");
-                }
-            } else {
-                alert("Your browser does not support selective audio routing. Please set your Google Home as the laptop's default audio output device in your system settings.");
-            }
-        }
+function log(msg) {
+const out = document.getElementById('debugOutput');
+const content = document.getElementById('logContent');
+out.classList.remove('hidden');
+content.innerHTML += > ${msg}<br>`;
+console.log(msg);
+}
 
-        window.routeAudioToSpeaker = async () => {
-            initAudio();
-            // Prompt the browser's native audio selection tool
-            if (navigator.mediaDevices && navigator.mediaDevices.selectAudioOutput) {
-                try {
-                    const audioDevice = await navigator.mediaDevices.selectAudioOutput();
-                    await setAudioOutput(audioDevice.deviceId, audioDevice.label);
-                } catch (err) {
-                    console.error("Device selection cancelled or failed:", err);
-                }
-            } else {
-                // Fallback: Enumerate devices manually if permission already granted
-                try {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const outputs = devices.filter(device => device.kind === 'audiooutput');
-                    if (outputs.length > 0) {
-                        // For secure context/iframe compatibility, request mic permission to unmask labels
-                        await navigator.mediaDevices.getUserMedia({ audio: true });
-                        const updatedDevices = await navigator.mediaDevices.enumerateDevices();
-                        const updatedOutputs = updatedDevices.filter(d => d.kind === 'audiooutput');
-                        
-                        // Pick first non-default output as a default demonstration
-                        const target = updatedOutputs.find(d => d.deviceId !== 'default') || updatedOutputs[0];
-                        await setAudioOutput(target.deviceId, target.label);
-                    } else {
-                        alert("No audio output devices found. Please connect your Google Home via Bluetooth to your laptop.");
-                    }
-                } catch (err) {
-                    alert("To select speaker routes, please configure your Google Home as the system default audio device on your computer settings.");
-                }
-            }
-        };
+document.getElementById('connectBtn').onclick = async () => {
+const input = document.getElementById('roomInput').value.trim().toUpperCase();
+if(!input) return;
 
-        function playHelpSound() {
-            if (!isLeadMode || !audioCtx) return;
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(880, now);
-            osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
-            g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.3, now + 0.1);
-            g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-            osc.connect(g); g.connect(masterGain);
-            osc.start(now); osc.stop(now + 0.8);
-        }
+activeRoom = input;
+log(Attempting connection to${input}...`);
 
-        function playEmergencySound() {
-            if (!isLeadMode || !audioCtx) return;
-            const now = audioCtx.currentTime;
-            
-            // Triple intense burst
-            [0, 0.2, 0.4].forEach(offset => {
-                const osc = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(1200, now + offset);
-                osc.frequency.exponentialRampToValueAtTime(600, now + offset + 0.15);
-                g.gain.setValueAtTime(0, now + offset);
-                g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02);
-                g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
-                osc.connect(g); g.connect(masterGain);
-                osc.start(now + offset); osc.stop(now + offset + 0.15);
-            });
-        }
+try {
+const app = initializeApp(firebaseConfig);
+auth = getAuth(app);
+db = getFirestore(app);
 
-        // --- Core Logic ---
+log("Firebase Initialized.");
 
-        function save() {
-            localStorage.setItem('andon_stats_v5', JSON.stringify(stations));
-        }
+await signInAnonymously(auth);
+log("Logged in anonymously.");
 
-        function getToday() {
-            return new Date().toISOString().split('T')[0];
-        }
+startSync();
 
-        function startTicker() {
-            if (ticker) return;
-            ticker = setInterval(() => {
-                let changed = false;
-                stations.forEach(s => {
-                    if (s.status === 'warning' && s.timer > 0) {
-                        s.timer--;
-                        changed = true;
-                        if (s.timer === 0) {
-                            updateStatus(s.id, 'critical', true);
-                        }
-                    }
-                });
-                if (changed) render();
-            }, 1000);
-        }
+document.getElementById('setupOverlay').classList.add('hidden');
+document.getElementById('mainApp').classList.remove('hidden');
+document.getElementById('headerTitle').innerText = SHOP: ${activeRoom}`;
 
-        window.updateStatus = (id, newStatus, isEscalation = false) => {
-            const station = stations.find(s => s.id === id);
-            if (!station || (station.status === newStatus && !isEscalation)) return;
+} catch (err) {
+log(ERROR:${err.message}`);
+}
+};
 
-            const oldStatus = station.status;
-            const today = getToday();
-            
-            if (!station.history[today]) {
-                station.history[today] = { help: 0, stop: 0 };
-            }
+function startSync() {
+const path = artifacts/andon-v2/public/data/${activeRoom}/stations`;
 
-            station.status = newStatus;
+onSnapshot(collection(db, path), (snap) => {
+document.getElementById('syncDot').className = "w-2 h-2 bg-green-500 rounded-full shadow-[0_0_5px_green]";
+document.getElementById('syncText').innerText = "Live Sync Active";
 
-            if (newStatus === 'warning') {
-                station.timer = HELP_TIMEOUT_SECONDS;
-                station.history[today].help++;
-                if (isLeadMode) playHelpSound();
-            } else {
-                station.timer = null;
-            }
+if(snap.empty) {
+log("Creating stations for the first time...");
+STATIONS.forEach((name, i) => {
+setDoc(doc(db, path, st-${i}), { name, status: 'normal', order: i }); }); } else { processes = snap.docs.map(d =&gt; ({ id: d.id, ...d.data() })).sort((a,b) =&gt; a.order - b.order); render(); } }, (err) =&gt; { log(Sync Error: ${err.message});
+document.getElementById('syncDot').className = "w-2 h-2 bg-red-500 rounded-full";
+document.getElementById('syncText').innerText = "Sync Failed";
+});
+}
 
-            if (newStatus === 'critical') {
-                station.history[today].stop++;
-                if (isLeadMode) playEmergencySound();
-            }
+window.updateStatus = async (id, status) => {
+const path = artifacts/andon-v2/public/data/${activeRoom}/stations`;
+try {
+await updateDoc(doc(db, path, id), { status });
+} catch (e) {
+alert("Update failed: " + e.message);
+}
+};
 
-            if (isLeadMode && newStatus !== 'normal' && oldStatus === 'normal') {
-                triggerToast(station);
-            }
+window.toggleLead = () => {
+isLead = !isLead;
+const btn = document.getElementById('leadBtn');
+btn.innerText = isLead ? "Lead: ON" : "Lead: OFF";
+btn.classList.toggle('bg-blue-600', isLead);
+btn.classList.toggle('border-blue-400', isLead);
+};
 
-            save();
-            render();
-        };
+function render() {
+const grid = document.getElementById('grid');
+grid.innerHTML = '';
 
-        function formatTime(seconds) {
-            if (seconds === null || seconds === undefined) return "";
-            const m = Math.floor(seconds / 60);
-            const s = seconds % 60;
-            return `${m}:${s.toString().padStart(2, '0')}`;
-        }
+processes.forEach(p => {
+const card = document.createElement('div');
+let bg = "bg-slate-900 border-slate-800";
+let dot = "bg-green-500";
 
-        window.showMasterStats = () => {
-            const content = document.getElementById('masterStatsContent');
-            const printContainer = document.getElementById('printTableContainer');
-            document.getElementById('printDate').innerText = `Generated: ${new Date().toLocaleString()}`;
-            content.innerHTML = '';
-            printContainer.innerHTML = '';
+if(p.status === 'warning') {
+bg = "bg-amber-500/10 border-amber-500/50";
+dot = "bg-amber-500 shadow-[0_0_10px_orange]";
+} else if(p.status === 'critical') {
+bg = "emergency-blink border-red-500";
+dot = "bg-white";
+}
 
-            const allDates = new Set();
-            stations.forEach(s => Object.keys(s.history).forEach(d => allDates.add(d)));
-            const sortedDates = Array.from(allDates).sort().reverse();
-
-            if (sortedDates.length === 0) {
-                content.innerHTML = '<p class="text-center py-20 text-slate-500 font-bold uppercase">No data recorded</p>';
-                return;
-            }
-
-            sortedDates.forEach(date => {
-                const dateLabel = new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                const tableHtml = `
-                    <table class="w-full text-left mt-4 mb-10">
-                        <thead><tr class="text-[10px] text-slate-500 font-black uppercase"><th class="pb-4">Sector</th><th class="pb-4">Help Requests</th><th class="pb-4">Stoppages</th></tr></thead>
-                        <tbody class="divide-y divide-white/5">
-                            ${stations.map(s => {
-                                const data = s.history[date] || { help: 0, stop: 0 };
-                                return `<tr><td class="py-3 font-bold text-white">${s.name}</td><td class="py-3 font-black text-amber-500">${data.help}</td><td class="py-3 font-black text-red-500">${data.stop}</td></tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>`;
-                content.innerHTML += `<div class="sticky top-0 bg-slate-900 py-2 border-b border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest z-10">${dateLabel}</div>${tableHtml}`;
-                printContainer.innerHTML += `<h2 class="text-lg font-bold mb-2 mt-8 border-b border-gray-300 pb-1">${dateLabel}</h2><table class="print-table"><thead><tr><th>Station</th><th>Help Calls</th><th>Stoppages</th></tr></thead><tbody>${stations.map(s => {const data = s.history[date] || { help: 0, stop: 0 }; return `<tr><td>${s.name}</td><td>${data.help}</td><td>${data.stop}</td></tr>`;}).join('')}</tbody></table>`;
-            });
-            document.getElementById('masterStatsModal').classList.remove('hidden');
-        };
-
-        window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
-
-        window.showSpeakerSettings = () => {
-            initAudio();
-            document.getElementById('speakerModal').classList.remove('hidden');
-        }
-        window.closeSpeakerSettings = () => document.getElementById('speakerModal').classList.add('hidden');
-
-        window.toggleLeadMode = () => {
-            initAudio();
-            isLeadMode = !isLeadMode;
-            const btn = document.getElementById('leadBtn');
-            const dot = document.getElementById('leadStatusDot');
-            if (isLeadMode) {
-                btn.classList.replace('bg-slate-800', 'bg-blue-600');
-                btn.classList.replace('border-slate-700', 'border-blue-400');
-                dot.classList.replace('bg-slate-500', 'bg-white');
-            } else {
-                btn.classList.replace('bg-blue-600', 'bg-slate-800');
-                btn.classList.replace('border-blue-400', 'border-slate-700');
-                dot.classList.replace('bg-white', 'bg-slate-500');
-            }
-        };
-
-        window.resetStats = () => {
-            if(confirm("Clear all logs?")) {
-                stations = INITIAL_STATIONS.map(s => ({ ...s, history: {} }));
-                save();
-                render();
-            }
-        };
-
-        function triggerToast(station) {
-            const toast = document.getElementById('alertToast');
-            document.getElementById('toastTitle').innerText = station.status === 'critical' ? "Production Stopped" : "Assistance Needed";
-            document.getElementById('toastMsg').innerText = station.name;
-            toast.classList.remove('translate-y-40');
-            setTimeout(() => toast.classList.add('translate-y-40'), 5000);
-        }
-
-        window.closeToast = () => document.getElementById('alertToast').classList.add('translate-y-40');
-
-        function render() {
-            const today = getToday();
-            let totalHelp = 0, totalStop = 0;
-            stations.forEach(s => { if(s.history[today]) { totalHelp += s.history[today].help; totalStop += s.history[today].stop; } });
-            const activeIssues = stations.filter(s => s.status !== 'normal').length;
-            const health = Math.round(((stations.length - activeIssues) / stations.length) * 100);
-
-            document.getElementById('statsBar').innerHTML = `
-                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Health</p><p class="text-2xl font-black ${health > 70 ? 'text-green-500' : 'text-amber-500'}">${health}%</p></div>
-                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Help</p><p class="text-2xl font-black text-amber-500">${totalHelp}</p></div>
-                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Stops</p><p class="text-2xl font-black text-red-500">${totalStop}</p></div>
-                <div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Active Alerts</p><p class="text-2xl font-black text-white">${activeIssues}</p></div>`;
-
-            const grid = document.getElementById('processGrid');
-            grid.innerHTML = '';
-            stations.forEach(s => {
-                const dayData = s.history[today] || { help: 0, stop: 0 };
-                let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
-                const card = document.createElement('div');
-                card.className = `station-card border-2 p-5 rounded-3xl ${bg}`;
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div><h3 class="font-black text-sm uppercase text-white mb-1">${s.name}</h3><div class="flex gap-2"><span class="text-[10px] font-black text-amber-500">${dayData.help}H</span><span class="text-[10px] font-black text-red-500">${dayData.stop}S</span></div></div>
-                        <div class="text-right"><div class="text-[14px] font-black ${s.timer < 60 ? 'text-red-500' : 'text-white'}">${formatTime(s.timer)}</div><div class="text-[8px] font-black text-slate-500 uppercase tracking-tighter">${s.status === 'warning' ? 'Escalation Timer' : ''}</div></div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 mt-6">
-                        <button onclick="updateStatus(${s.id}, 'normal')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'normal' ? 'bg-green-600 border-green-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}">OK</button>
-                        <button onclick="updateStatus(${s.id}, 'warning')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'warning' ? 'bg-amber-500 border-amber-300 text-black' : 'bg-slate-800 border-slate-700 text-slate-500'}">HELP</button>
-                        <button onclick="updateStatus(${s.id}, 'critical')" class="py-3 rounded-xl text-[9px] font-black border ${s.status === 'critical' ? 'bg-white border-white text-red-600' : 'bg-slate-800 border-slate-700 text-slate-500'}">STOP</button>
-                    </div>`;
-                grid.appendChild(card);
-            });
-        }
-        
-        startTicker();
-        render();
-    </script>
+card.className = ${bg} border-2 p-5 rounded-2xl transition-all duration-300; card.innerHTML =
+<div class="flex justify-between items-start mb-6">
+<h3 class="font-black text-sm uppercase tracking-tight">${p.name}&lt;/h3&gt; &lt;div class="w-3 h-3 rounded-full ${dot}"></div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button onclick="updateStatus('${p.id}', 'normal')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'normal' ? 'bg-green-600 border-green-400' : 'bg-slate-800 border-slate-700'}">Run</button>
+<button onclick="updateStatus('${p.id}', 'warning')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'warning' ? 'bg-amber-500 border-amber-300 text-black' : 'bg-slate-800 border-slate-700'}">Help</button>
+<button onclick="updateStatus('${p.id}', 'critical')" class="py-3 rounded-xl text-[10px] font-bold uppercase border ${p.status === 'critical' ? 'bg-white text-red-600 border-white' : 'bg-slate-800 border-slate-700'}"&gt;Stop&lt;/button&gt; &lt;/div&gt;;
+grid.appendChild(card);
+});
+}
+</script>
 </body>
 </html>
-
-```
