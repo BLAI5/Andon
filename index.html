@@ -24,316 +24,50 @@ body { background: white !important; color: black !important; }
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-500/30 overflow-x-hidden">
 
-<div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print">
+<!-- Login Screen -->
+<div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[500] flex items-center justify-center p-4">
+<div class="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
+<h2 class="text-3xl font-black text-white mb-2">Join Shop Floor</h2>
+<p class="text-slate-500 text-xs uppercase font-bold tracking-widest mb-8">Enter your shared team ID</p>
+
+<input type="text" id="shopIdInput" placeholder="e.g. assembly-line-1" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 text-white font-bold text-center mb-4 focus:outline-none focus:border-blue-500 transition-colors" autocomplete="off">
+
+<button onclick="joinShop()" id="joinBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wider py-4 rounded-xl transition-all active:scale-95">
+Connect Live
+</button>
+<p id="loginError" class="text-red-500 text-xs font-bold mt-4 hidden">Connection failed. Please try again.</p>
+</div>
+</div>
+
+<div id="app" class="max-w-6xl mx-auto p-4 pb-24 no-print hidden">
 <!-- Header -->
 <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-md shadow-2xl">
 <div class="text-center md:text-left">
 <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
 <span class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
-Shop Floor Monitor
+Shop Floor: <span id="displayShopId" class="text-blue-400"></span>
 </h1>
 <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Live Production Dashboard</p>
 </div>
 
-<div class="flex items-center gap-2">
-<button onclick="showMasterStats()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+<div class="flex flex-wrap items-center justify-center md:justify-end gap-2">
+<!-- Hidden by default, shown in lead mode -->
+<button onclick="openQuestions()" id="questionsBtn" class="hidden px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-teal-900/20">
+Questions 📋
+</button>
+<button onclick="openManageStations()" id="manageStationsBtn" class="hidden px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-purple-900/20">
+Manage Stations ⚙️
+</button>
+
+<button onclick="showMasterStats()" id="masterStatsBtn" class="hidden px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-black uppercase transition-all active:scale-95 shadow-lg shadow-blue-900/20">
 Master Stats 📊
 </button>
-<button onclick="resetStats()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
+<button onclick="resetStats()" id="clearLogsBtn" class="hidden px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-[10px] font-black uppercase transition-all active:scale-95">
 Clear Logs
 </button>
-<div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
+<div class="h-8 w-[1px] bg-slate-800 mx-2 hidden sm:block"></div>
 <button onclick="toggleLeadMode()" id="leadBtn" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 font-bold transition-all active:scale-95 text-xs">
 <span id="leadStatusDot" class="w-2 h-2 bg-slate-500 rounded-full"></span>
 Lead Mode
 </button>
-</div>
-</header>
-
-<!-- Main Stats Overview -->
-<div id="statsBar" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"></div>
-
-<!-- Station Grid -->
-<div id="processGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-</div>
-
-<!-- Master Stats Modal -->
-<div id="masterStatsModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl hidden z-[400] flex items-center justify-center p-4 no-print">
-<div class="bg-slate-900 border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-<div class="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
-<div>
-<h2 class="text-2xl font-black uppercase tracking-tight">Shop-Wide Report</h2>
-<p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Consolidated Production Data</p>
-</div>
-<div class="flex gap-2">
-<button onclick="window.print()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black uppercase text-xs transition-all active:scale-95">Print Full Report</button>
-<button onclick="closeMasterStats()" class="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl">✕</button>
-</div>
-</div>
-<div id="masterStatsContent" class="p-6 overflow-y-auto flex-1 space-y-8"></div>
-</div>
-</div>
-
-<!-- Print View -->
-<div id="printView" class="print-only p-8">
-<div class="print-header">
-<h1 class="text-3xl font-bold uppercase">Shop Floor Production Report</h1>
-<p id="printDate" class="text-sm font-bold mt-2"></p>
-</div>
-<div id="printTableContainer"></div>
-</div>
-
-<!-- Toast Notification -->
-<div id="alertToast" class="fixed bottom-6 right-6 left-6 md:left-auto md:w-80 transform translate-y-40 transition-transform duration-500 z-[300] no-print">
-<div id="toastContainer" class="p-5 rounded-2xl shadow-2xl flex items-center justify-between text-white backdrop-blur-lg">
-<div class="flex items-center gap-4">
-<div id="toastIcon" class="bg-white/20 p-2 rounded-xl text-xl">⚠️</div>
-<div>
-<p id="toastTitle" class="text-[10px] font-black uppercase opacity-70 tracking-widest"></p>
-<p id="toastMsg" class="font-bold text-lg"></p>
-</div>
-</div>
-<button onclick="closeToast()" class="p-2 hover:bg-white/10 rounded-full transition-colors">✕</button>
-</div>
-</div>
-
-<script>
-const HELP_TIMEOUT_SECONDS = 600; // 10 Minutes
-const INITIAL_STATIONS = [
-{ id: 1, name: 'Installation', status: 'normal', history: {}, timer: null },
-{ id: 2, name: 'Millwork', status: 'normal', history: {}, timer: null },
-{ id: 3, name: 'Systems', status: 'normal', history: {}, timer: null },
-{ id: 4, name: 'Lamination', status: 'normal', history: {}, timer: null },
-{ id: 5, name: 'Upholstery', status: 'normal', history: {}, timer: null },
-{ id: 6, name: 'CNC', status: 'normal', history: {}, timer: null },
-{ id: 7, name: 'Finishing', status: 'normal', history: {}, timer: null },
-{ id: 8, name: 'Assembly', status: 'normal', history: {}, timer: null }
- ];
-
-let stations = JSON.parse(localStorage.getItem('andon_stats_v5')) || [...INITIAL_STATIONS];
-let isLeadMode = false;
-let ticker = null;
-
-// --- Audio Engine ---
-let audioCtx = null;
-let masterGain = null;
-
-function initAudio() {
-if (audioCtx) return;
-audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-masterGain = audioCtx.createGain();
-masterGain.connect(audioCtx.destination);
-
-setInterval(() => {
-if (audioCtx.state === 'suspended') audioCtx.resume();
-const oscillator = audioCtx.createOscillator();
-const gain = audioCtx.createGain();
-gain.gain.value = 0.0001;
-oscillator.connect(gain);
-gain.connect(audioCtx.destination);
-oscillator.start();
-oscillator.stop(audioCtx.currentTime + 0.1);
-}, 5000);
-}
-
-function playHelpSound() {
-if (!isLeadMode || !audioCtx) return;
-const now = audioCtx.currentTime;
-const osc = audioCtx.createOscillator();
-const g = audioCtx.createGain();
-osc.type = 'triangle';
-osc.frequency.setValueAtTime(880, now);
-osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
-g.gain.setValueAtTime(0, now);
-g.gain.linearRampToValueAtTime(0.3, now + 0.1);
-g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-osc.connect(g); g.connect(masterGain);
-osc.start(now); osc.stop(now + 0.8);
-}
-
-function playEmergencySound() {
-if (!isLeadMode || !audioCtx) return;
-const now = audioCtx.currentTime;
-
-// Triple intense burst
-[0, 0.2, 0.4].forEach(offset => {
-const osc = audioCtx.createOscillator();
-const g = audioCtx.createGain();
-osc.type = 'sawtooth';
-osc.frequency.setValueAtTime(1200, now + offset);
-osc.frequency.exponentialRampToValueAtTime(600, now + offset + 0.15);
-g.gain.setValueAtTime(0, now + offset);
-g.gain.linearRampToValueAtTime(0.4, now + offset + 0.02);
-g.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
-osc.connect(g); g.connect(masterGain);
-osc.start(now + offset); osc.stop(now + offset + 0.15);
-});
-}
-
-// --- Core Logic ---
-
-function save() {
-localStorage.setItem('andon_stats_v5', JSON.stringify(stations));
-}
-
-function getToday() {
-return new Date().toISOString().split('T')[0];
-}
-
-function startTicker() {
-if (ticker) return;
-ticker = setInterval(() => {
-let changed = false;
-stations.forEach(s => {
-if (s.status === 'warning' && s.timer > 0) {
-s.timer--;
-changed = true;
-if (s.timer === 0) {
-updateStatus(s.id, 'critical', true);
-}
-}
-});
-if (changed) render();
-}, 1000);
-}
-
-window.updateStatus = (id, newStatus, isEscalation = false) => {
-const station = stations.find(s => s.id === id);
-if (!station || (station.status === newStatus && !isEscalation)) return;
-
-const oldStatus = station.status;
-const today = getToday();
-
-if (!station.history[today]) {
-station.history[today] = { help: 0, stop: 0 };
-}
-
-station.status = newStatus;
-
-if (newStatus === 'warning') {
-station.timer = HELP_TIMEOUT_SECONDS;
-station.history[today].help++;
-if (isLeadMode) playHelpSound();
-} else {
-station.timer = null;
-}
-
-if (newStatus === 'critical') {
-station.history[today].stop++;
-if (isLeadMode) playEmergencySound();
-}
-
-if (isLeadMode && newStatus !== 'normal' && oldStatus === 'normal') {
-triggerToast(station);
-}
-
-save();
-render();
-};
-
-function formatTime(seconds) {
-if (seconds === null || seconds === undefined) return "";
-const m = Math.floor(seconds / 60);
-const s = seconds % 60;
-return ${m}:${s.toString().padStart(2, '0')};
-}
-
-window.showMasterStats = () => {
-const content = document.getElementById('masterStatsContent');
-const printContainer = document.getElementById('printTableContainer');
-document.getElementById('printDate').innerText = Generated: ${new Date().toLocaleString()}`;
-content.innerHTML = '';
-printContainer.innerHTML = '';
-
-const allDates = new Set();
-stations.forEach(s => Object.keys(s.history).forEach(d => allDates.add(d)));
-const sortedDates = Array.from(allDates).sort().reverse();
-
-if (sortedDates.length === 0) {
-content.innerHTML = '<p class="text-center py-20 text-slate-500 font-bold uppercase">No data recorded</p>';
-return;
-}
-
-sortedDates.forEach(date => {
-const dateLabel = new Date(date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-const tableHtml = &lt;table class="w-full text-left mt-4 mb-10"&gt; &lt;thead&gt;&lt;tr class="text-[10px] text-slate-500 font-black uppercase"&gt;&lt;th class="pb-4"&gt;Sector&lt;/th&gt;&lt;th class="pb-4"&gt;Help Requests&lt;/th&gt;&lt;th class="pb-4"&gt;Stoppages&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt; &lt;tbody class="divide-y divide-white/5"&gt;${stations.map(s => {
-const data = s.history[date] || { help: 0, stop: 0 };
-return <tr&gt;&lt;td class="py-3 font-bold text-white"&gt;${s.name}</td><td class="py-3 font-black text-amber-500">${data.help}&lt;/td&gt;&lt;td class="py-3 font-black text-red-500"&gt;${data.stop}</td></tr>; }).join('')} &lt;/tbody&gt; &lt;/table>;
-content.innerHTML += <div class="sticky top-0 bg-slate-900 py-2 border-b border-blue-500/30 text-blue-400 font-black uppercase text-xs tracking-widest z-10"&gt;${dateLabel}</div>{dateLabel}</h2><table class="print-table"><thead><tr><th>Station</th><th>Help Calls</th><th>Stoppages</th></tr></thead><tbody>latex
-{stations.map(s =&gt; {const data = s.history[date] || { help: 0, stop: 0 }; return `<tr&gt;&lt;td&gt;
-
-{s.name}</td><td>{data.stop}</td></tr>;}).join('')}&lt;/tbody&gt;&lt;/table>;
-});
-document.getElementById('masterStatsModal').classList.remove('hidden');
-};
-
-window.closeMasterStats = () => document.getElementById('masterStatsModal').classList.add('hidden');
-
-window.toggleLeadMode = () => {
-initAudio();
-isLeadMode = !isLeadMode;
-const btn = document.getElementById('leadBtn');
-const dot = document.getElementById('leadStatusDot');
-if (isLeadMode) {
-btn.classList.replace('bg-slate-800', 'bg-blue-600');
-btn.classList.replace('border-slate-700', 'border-blue-400');
-dot.classList.replace('bg-slate-500', 'bg-white');
-} else {
-btn.classList.replace('bg-blue-600', 'bg-slate-800');
-btn.classList.replace('border-blue-400', 'border-slate-700');
-dot.classList.replace('bg-white', 'bg-slate-500');
-}
-};
-
-window.resetStats = () => {
-if(confirm("Clear all logs?")) {
-stations = INITIAL_STATIONS.map(s => ({ ...s, history: {} }));
-save();
-render();
-}
-};
-
-function triggerToast(station) {
-const toast = document.getElementById('alertToast');
-document.getElementById('toastTitle').innerText = station.status === 'critical' ? "Production Stopped" : "Assistance Needed";
-document.getElementById('toastMsg').innerText = station.name;
-toast.classList.remove('translate-y-40');
-setTimeout(() => toast.classList.add('translate-y-40'), 5000);
-}
-
-window.closeToast = () => document.getElementById('alertToast').classList.add('translate-y-40');
-
-function render() {
-const today = getToday();
-let totalHelp = 0, totalStop = 0;
-stations.forEach(s => { if(s.history[today]) { totalHelp += s.history[today].help; totalStop += s.history[today].stop; } });
-const activeIssues = stations.filter(s => s.status !== 'normal').length;
-const health = Math.round(((stations.length - activeIssues) / stations.length) * 100);
-
-document.getElementById('statsBar').innerHTML = &lt;div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"&gt;&lt;p class="text-[8px] font-black text-slate-500 uppercase mb-1"&gt;Health&lt;/p&gt;&lt;p class="text-2xl font-black ${health > 70 ? 'text-green-500' : 'text-amber-500'}">${health}%&lt;/p&gt;&lt;/div&gt; &lt;div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"&gt;&lt;p class="text-[8px] font-black text-slate-500 uppercase mb-1"&gt;Today Help&lt;/p&gt;&lt;p class="text-2xl font-black text-amber-500"&gt;${totalHelp}</p></div>
-<div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"><p class="text-[8px] font-black text-slate-500 uppercase mb-1">Today Stops</p><p class="text-2xl font-black text-red-500">${totalStop}&lt;/p&gt;&lt;/div&gt; &lt;div class="bg-slate-900 border border-white/5 p-4 rounded-2xl text-center"&gt;&lt;p class="text-[8px] font-black text-slate-500 uppercase mb-1"&gt;Active Alerts&lt;/p&gt;&lt;p class="text-2xl font-black text-white"&gt;${activeIssues}</p></div>`;
-
-const grid = document.getElementById('processGrid');
-grid.innerHTML = '';
-stations.forEach(s => {
-const dayData = s.history[today] || { help: 0, stop: 0 };
-let bg = s.status === 'warning' ? "bg-amber-500/10 border-amber-500/30" : s.status === 'critical' ? "emergency-blink border-red-500" : "bg-slate-900 border-white/5";
-const card = document.createElement('div');
-card.className = station-card border-2 p-5 rounded-3xl${bg}; card.innerHTML =
-<div class="flex justify-between items-start mb-4">
-<div><h3 class="font-black text-sm uppercase text-white mb-1">{dayData.help}H</span><span class="text-[10px] font-black text-red-500">{s.timer < 60 ? 'text-red-500' : 'text-white'}">{s.status === 'warning' ? 'Escalation Timer' : ''}</div></div>
-</div>
-<div class="grid grid-cols-3 gap-2 mt-6">
-<button onclick="updateStatus({s.status === 'normal' ? 'bg-green-600 border-green-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-500'}">OK</button>
-<button onclick="updateStatus({s.status === 'warning' ? 'bg-amber-500 border-amber-300 text-black' : 'bg-slate-800 border-slate-700 text-slate-500'}">HELP</button>
-<button onclick="updateStatus({s.status === 'critical' ? 'bg-white border-white text-red-600' : 'bg-slate-800 border-slate-700 text-slate-500'}">STOP</button>
-</div>`;
-grid.appendChild(card);
-});
-}
-
-startTicker();
-render();
-</script>
-</body>
-</html>
+<button onclick="logoutShop()" class="ml-2 px-3 py-2.5 rounded-xl bg-red-900/30 text-red-400 hover:bg-red-800/50 border border-red-900/50 font-bold transition-all active:scale-95 text-xs">
